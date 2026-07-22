@@ -35,7 +35,6 @@ variable "storage_type" {
 }
 
 variable "project_name" {
-  description = "Prefix for naming. Students should change from 'satellite' to their own."
   type        = string
   default     = "odin"
 }

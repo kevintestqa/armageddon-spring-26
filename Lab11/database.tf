@@ -1,5 +1,5 @@
-resource "aws_db_instance" "odin_rds01" {
-  identifier               = "${local.name_prefix}-rds01"
+resource "aws_db_instance" "odin_rds" {
+  identifier               = "${local.name_prefix}-rds"
   engine                   = var.db_engine
   instance_class           = var.db_instance_class
   storage_type             = var.storage_type
@@ -11,13 +11,13 @@ resource "aws_db_instance" "odin_rds01" {
   multi_az                 = true
   delete_automated_backups = false
 
-  db_subnet_group_name   = aws_db_subnet_group.odin_rds_subnet_group01.name
-  vpc_security_group_ids = [aws_security_group.odin_rds_sg01.id]
+  db_subnet_group_name   = aws_db_subnet_group.odin_rds_subnet_group.name
+  vpc_security_group_ids = [aws_security_group.odin_rds_sg.id]
 
   publicly_accessible = false
   skip_final_snapshot = true
 
   tags = {
-    Name = "${local.name_prefix}-rds01"
+    Name = "${local.name_prefix}-rds"
   }
 }
