@@ -15,6 +15,13 @@ resource "aws_iam_role" "asgard_lambda_role" {
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.asgard_lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  lifecycle {
+    postcondition {
+      condition     = aws_iam_role.asgard_lambda_role.name != null
+      error_message = "API Gateway stage must be created before associating the WAF."
+    }
+  }
 }
 
 resource "aws_iam_policy" "asgard_lambda_app_policy" {
@@ -62,7 +69,7 @@ resource "aws_iam_role_policy_attachment" "asgard_lambda_app_policy_attach" {
   policy_arn = aws_iam_policy.asgard_lambda_app_policy.arn
 }
 
-data "aws_iam_policy_document" "waf_log_policy" {
+data "aws_iam_policy_document" "asgard_waf_log_policy" {
   version = "2012-10-17"
   statement {
     effect = "Allow"
