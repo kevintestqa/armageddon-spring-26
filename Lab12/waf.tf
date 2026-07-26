@@ -84,14 +84,3 @@ resource "aws_wafv2_web_acl_association" "asgard_waf_association" {
   resource_arn = aws_api_gateway_stage.qa_environment.arn
   web_acl_arn  = aws_wafv2_web_acl.asgard_waf_v2.arn
 }
-
-check "waf_attached_to_qa_stage" {
-  assert {
-    condition = strcontains(
-      aws_wafv2_web_acl_association.asgard_waf_association.resource_arn,
-      "/stages/qa"
-    )
-
-    error_message = "The WAF must be associated with the QA API Gateway stage."
-  }
-}

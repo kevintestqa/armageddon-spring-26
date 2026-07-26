@@ -20,3 +20,9 @@ variable "azs" {
   type        = list(string)
   default     = ["us-east-1a", "us-west-1a"]
 }
+
+variable "sns_email_endpoint" {
+  description = "Email for SNS subscription"
+  type        = string
+  default     = "kevindevops0920@gmail.com"
+}
