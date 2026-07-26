@@ -1,3 +1,7 @@
+data "aws_region" "current" {}
+data "aws_partition" "current" {}
+data "aws_caller_identity" "current" {}
+
 resource "aws_api_gateway_rest_api" "asgard_api_rest" {
   name = "asgard_api_rest"
 

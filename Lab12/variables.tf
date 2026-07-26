@@ -26,3 +26,17 @@ variable "sns_email_endpoint" {
   type        = string
   default     = "kevindevops0920@gmail.com"
 }
+
+variable "odin_password" {
+  description = "Password for the Odin Cognito user"
+  type        = string
+  default     = "Gungnir!"
+  sensitive   = true
+}
+
+variable "thor_password" {
+  description = "Password for the Thor Cognito user"
+  type        = string
+  default     = "Mjolnir1234!"
+  sensitive   = true
+}

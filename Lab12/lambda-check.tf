@@ -114,10 +114,10 @@ check "waf_bedrock_archive_uses_expected_source" {
       data.archive_file.waf_bedrock_analyzer.type == "zip"
       &&
       data.archive_file.waf_bedrock_analyzer.source_file ==
-      "${path.module}/source/waf_bedrock_analyzer.py"
+      "${path.module}/Lambda_Src/waf_bedrock_analyzer.py"
       &&
       data.archive_file.waf_bedrock_analyzer.output_path ==
-      "${path.module}/lambda/waf_bedrock_analyzer.zip"
+      "${path.module}/Lambda_Src/waf_bedrock_analyzer.zip"
     )
 
     error_message = "The WAF Bedrock analyzer archive must package the expected source file into the expected deployment package."

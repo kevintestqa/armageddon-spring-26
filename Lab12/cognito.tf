@@ -76,17 +76,11 @@ resource "aws_cognito_user_pool_client" "asgard_client" {
     "ALLOW_REFRESH_TOKEN_AUTH"
   ]
 
-  token_validity_units {
-    access_token  = "minutes"
-    id_token      = "minutes"
-    refresh_token = "days"
-  }
-
   //supported_identity_providers = ["COGNITO"]
 }
 
 //login page domain for cognito user pool
-resource "aws_user_pool_domain" "asgard_domain" {
+resource "aws_cognito_user_pool_domain" "asgard_domain" {
   domain       = "asgard-domain"
   user_pool_id = aws_cognito_user_pool.asgard_pool.id
 }
@@ -116,6 +110,7 @@ resource "aws_cognito_user_group" "asgard_admin_group" {
 resource "aws_cognito_user" "odin" {
     user_pool_id = aws_cognito_user_pool.asgard_pool.id
     username = "odin"
+    password = var.odin_password
 
     attributes = {
       "email" = "kevinwillocks@icloud.com"
@@ -126,6 +121,7 @@ resource "aws_cognito_user" "odin" {
 resource "aws_cognito_user" "thor" {
     user_pool_id = aws_cognito_user_pool.asgard_pool.id
     username = "thor"
+    password = var.thor_password
 
     attributes = {
       "email" = "kevinwillocks@gmail.com"
