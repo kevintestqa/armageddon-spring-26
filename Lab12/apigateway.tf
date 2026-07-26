@@ -1,8 +1,3 @@
-# locals {
-#   pythonQuery = "/python?name=Chewbacca"
-#   nodeQuery   = "/node?name=Malgus"
-# }
-
 resource "aws_api_gateway_rest_api" "asgard_api_rest" {
   name = "asgard_api_rest"
 
@@ -67,7 +62,6 @@ resource "aws_api_gateway_stage" "qa_environment" {
   rest_api_id   = aws_api_gateway_rest_api.asgard_api_rest.id
   stage_name    = "qa"
 }
-
 
 # //Python Resources
 resource "aws_api_gateway_resource" "python_resource" {

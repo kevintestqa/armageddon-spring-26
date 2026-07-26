@@ -238,3 +238,181 @@ check "waf_bedrock_lambda_environment_references_expected_resources" {
     error_message = "The WAF Bedrock analyzer Lambda environment variables must reference the expected resources and approved values."
   }
 }
+
+###############################################################################
+# Node.js Authentication Lambda Checks
+###############################################################################
+
+check "node_auth_uses_expected_archive" {
+  # Given the Node.js authentication Lambda package,
+  # when Terraform evaluates the deployment artifact,
+  # then the function must use the archive generated from auth.js.
+
+  assert {
+    condition = (
+      data.archive_file.node_archive.type == "zip"
+      &&
+      data.archive_file.node_archive.source_file ==
+      "${path.module}/Lambda_Src/auth.js"
+      &&
+      data.archive_file.node_archive.output_path ==
+      "${path.module}/Lambda_Src/node.zip"
+      &&
+      aws_lambda_function.node_auth.filename ==
+      data.archive_file.node_archive.output_path
+      &&
+      aws_lambda_function.node_auth.code_sha256 ==
+      data.archive_file.node_archive.output_base64sha256
+    )
+
+    error_message = "The Node.js authentication Lambda must use the ZIP archive generated from Lambda_Src/auth.js."
+  }
+}
+
+check "node_auth_uses_expected_execution_role" {
+  # Given the Node.js authentication Lambda,
+  # when Terraform evaluates its execution role,
+  # then it must use the Asgard Lambda IAM role.
+
+  assert {
+    condition = (
+      aws_lambda_function.node_auth.role ==
+      aws_iam_role.asgard_lambda_role.arn
+    )
+
+    error_message = "The Node.js authentication Lambda must use the Asgard Lambda execution role."
+  }
+}
+
+check "node_auth_uses_expected_runtime_and_handler" {
+  # Given the Node.js authentication Lambda,
+  # when Terraform evaluates its runtime configuration,
+  # then it must use Node.js 24 and the auth.handler entry point.
+
+  assert {
+    condition = (
+      aws_lambda_function.node_auth.runtime == "nodejs24.x"
+      &&
+      aws_lambda_function.node_auth.handler == "auth.handler"
+    )
+
+    error_message = "The Node.js authentication Lambda must use runtime nodejs24.x and handler auth.handler."
+  }
+}
+
+check "node_auth_uses_expected_environment_variables" {
+  # Given the Node.js authentication Lambda,
+  # when Terraform evaluates its environment configuration,
+  # then it must contain only the approved environment and log-level variables.
+
+  assert {
+    condition = (
+      toset(
+        keys(
+          aws_lambda_function.node_auth.environment[0].variables
+        )
+      ) ==
+      toset([
+        "ENVIRONMENT",
+        "LOG_LEVEL"
+      ])
+      &&
+      aws_lambda_function.node_auth.environment[0].variables["ENVIRONMENT"] ==
+      "production"
+      &&
+      aws_lambda_function.node_auth.environment[0].variables["LOG_LEVEL"] ==
+      "info"
+    )
+
+    error_message = "The Node.js authentication Lambda must use ENVIRONMENT=production and LOG_LEVEL=info with no unexpected environment variables."
+  }
+}
+
+###############################################################################
+# Python Authentication Lambda Checks
+###############################################################################
+
+check "python_auth_uses_expected_archive" {
+  # Given the Python authentication Lambda package,
+  # when Terraform evaluates the deployment artifact,
+  # then the function must use the archive generated from auth.py.
+
+  assert {
+    condition = (
+      data.archive_file.python_archive.type == "zip"
+      &&
+      data.archive_file.python_archive.source_file ==
+      "${path.module}/Lambda_Src/auth.py"
+      &&
+      data.archive_file.python_archive.output_path ==
+      "${path.module}/Lambda_Src/python.zip"
+      &&
+      aws_lambda_function.python_auth.filename ==
+      data.archive_file.python_archive.output_path
+      &&
+      aws_lambda_function.python_auth.code_sha256 ==
+      data.archive_file.python_archive.output_base64sha256
+    )
+
+    error_message = "The Python authentication Lambda must use the ZIP archive generated from Lambda_Src/auth.py."
+  }
+}
+
+check "python_auth_uses_expected_execution_role" {
+  # Given the Python authentication Lambda,
+  # when Terraform evaluates its execution role,
+  # then it must use the Asgard Lambda IAM role.
+
+  assert {
+    condition = (
+      aws_lambda_function.python_auth.role ==
+      aws_iam_role.asgard_lambda_role.arn
+    )
+
+    error_message = "The Python authentication Lambda must use the Asgard Lambda execution role."
+  }
+}
+
+check "python_auth_uses_expected_runtime_and_handler" {
+  # Given the Python authentication Lambda,
+  # when Terraform evaluates its runtime configuration,
+  # then it must use Python 3.14 and the auth.lambda_handler entry point.
+
+  assert {
+    condition = (
+      aws_lambda_function.python_auth.runtime == "python3.14"
+      &&
+      aws_lambda_function.python_auth.handler == "auth.lambda_handler"
+    )
+
+    error_message = "The Python authentication Lambda must use runtime python3.14 and handler auth.lambda_handler."
+  }
+}
+
+check "python_auth_uses_expected_environment_variables" {
+  # Given the Python authentication Lambda,
+  # when Terraform evaluates its environment configuration,
+  # then it must contain only the approved environment and log-level variables.
+
+  assert {
+    condition = (
+      toset(
+        keys(
+          aws_lambda_function.python_auth.environment[0].variables
+        )
+      ) ==
+      toset([
+        "ENVIRONMENT",
+        "LOG_LEVEL"
+      ])
+      &&
+      aws_lambda_function.python_auth.environment[0].variables["ENVIRONMENT"] ==
+      "production"
+      &&
+      aws_lambda_function.python_auth.environment[0].variables["LOG_LEVEL"] ==
+      "info"
+    )
+
+    error_message = "The Python authentication Lambda must use ENVIRONMENT=production and LOG_LEVEL=info with no unexpected environment variables."
+  }
+}

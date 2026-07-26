@@ -80,8 +80,8 @@ resource "aws_wafv2_web_acl_rule" "asgard_block" {
   }
 }
 
-//Do we need to associate the WAF with the API Gateway stage?
-# resource "aws_wafv2_web_acl_association" "asgard_waf_association" {
-#   resource_arn = aws_api_gateway_stage.qa_environment.arn
-#   web_acl_arn  = aws_wafv2_web_acl.asgard_waf_v2.arn
-# }
+
+resource "aws_wafv2_web_acl_association" "asgard_waf_association" {
+  resource_arn = aws_api_gateway_stage.qa_environment.arn
+  web_acl_arn  = aws_wafv2_web_acl.asgard_waf_v2.arn
+}

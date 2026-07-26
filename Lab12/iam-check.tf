@@ -126,3 +126,24 @@ check "lambda_policy_allows_only_bedrock_model_invocation" {
     error_message = "The Lambda IAM policy must allow only bedrock:InvokeModel in the Bedrock statement."
   }
 }
+
+check "lambda_app_policy_allows_filter_log_events" {
+  # Given the Asgard Lambda application policy,
+  # when Terraform evaluates the CloudWatch Logs permissions,
+  # then the Lambda role must be allowed to filter log events.
+
+  assert {
+    condition = (
+      length([
+        for statement in jsondecode(
+          aws_iam_policy.asgard_lambda_app_policy.policy
+        ).Statement : statement
+        if statement.Effect == "Allow"
+        && toset(statement.Action) == toset(["logs:FilterLogEvents"])
+        && statement.Resource == "*"
+      ]) == 1
+    )
+
+    error_message = "The Asgard Lambda application policy must allow logs:FilterLogEvents on all CloudWatch Logs resources."
+  }
+}
