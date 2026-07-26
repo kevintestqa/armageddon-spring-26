@@ -55,3 +55,54 @@ data "archive_file" "waf_bedrock_analyzer" {
   source_file = "${path.module}/Lambda_Src/waf_bedrock_analyzer.py"
   output_path = "${path.module}/Lambda_Src/waf_bedrock_analyzer.zip"
 }
+
+data "archive_file" "node_archive" {
+  type        = "zip"
+  source_file = "${path.module}/Lambda_Src/auth.js"
+  output_path = "${path.module}/Lambda_Src/node.zip"
+}
+
+# Lambda function
+resource "aws_lambda_function" "node_auth" {
+  filename      = data.archive_file.node_archive.output_path
+  function_name = "node_lambda_function"
+  role          = aws_iam_role.asgard_lambda_role.arn
+  handler       = "auth.handler"
+  code_sha256   = data.archive_file.node_archive.output_base64sha256
+
+  runtime = "nodejs24.x"
+
+  environment {
+    variables = {
+      ENVIRONMENT = "production"
+      LOG_LEVEL   = "info"
+    }
+  }
+}
+
+///Python
+
+# Package the Lambda function code
+data "archive_file" "python_archive" {
+  type        = "zip"
+  source_file = "${path.module}/Lambda_Src/auth.py"
+  output_path = "${path.module}/Lambda_Src/python.zip"
+}
+
+# Lambda function
+resource "aws_lambda_function" "python_auth" {
+  filename      = data.archive_file.python_archive.output_path
+  function_name = "python_lambda_function"
+  role          = aws_iam_role.asgard_lambda_role.arn
+  handler       = "auth.lambda_handler"
+  code_sha256   = data.archive_file.python_archive.output_base64sha256
+
+  runtime = "python3.14"
+
+  environment {
+    variables = {
+      ENVIRONMENT = "production"
+      LOG_LEVEL   = "info"
+    }
+  }
+}
