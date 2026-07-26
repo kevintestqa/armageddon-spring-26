@@ -50,5 +50,5 @@ resource "aws_cloudwatch_event_target" "critical_asgard_lambda" {
 
 resource "aws_cloudwatch_event_target" "critical_sns" {
   rule = aws_cloudwatch_event_rule.asgard_critical_findings.name
-  arn  = aws_sns_topic.critical_alerts.arn
+  arn  = aws_sns_topic.asgard_critical_alerts_topic.arn
 }

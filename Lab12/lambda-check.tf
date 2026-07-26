@@ -62,11 +62,11 @@ check "lambda_uses_only_expected_environment_variables" {
         aws_lambda_function.asgard_lambda_function.environment[0].variables
       )
       ) == toset([
-      "CORRELATION_FINDINGS_TABLE",
-      "SECURITY_INCIDENTS_TABLE",
-      "SNS_TOPIC_ARN",
-      "BEDROCK_MODEL_ID",
-      "ENABLE_BEDROCK"
+        "CORRELATION_FINDINGS_TABLE",
+        "SECURITY_INCIDENTS_TABLE",
+        "SNS_TOPIC_ARN",
+        "BEDROCK_MODEL_ID",
+        "ENABLE_BEDROCK"
     ])
 
     error_message = "The Asgard Lambda function must contain only the required DynamoDB, SNS, and Bedrock environment variables."
@@ -81,13 +81,13 @@ check "lambda_environment_variables_reference_expected_resources" {
   assert {
     condition = (
       aws_lambda_function.asgard_lambda_function.environment[0].variables["CORRELATION_FINDINGS_TABLE"] ==
-      aws_dynamodb_table.waf_correlation_findings.name
+      aws_dynamodb_table.asgard_waf_correlation_findings.name
       &&
       aws_lambda_function.asgard_lambda_function.environment[0].variables["SECURITY_INCIDENTS_TABLE"] ==
-      aws_dynamodb_table.security_incidents.name
+      aws_dynamodb_table.asgard_security_incidents.name
       &&
       aws_lambda_function.asgard_lambda_function.environment[0].variables["SNS_TOPIC_ARN"] ==
-      aws_sns_topic.critical_alerts.arn
+      aws_sns_topic.asgard_critical_alerts_topic.arn
       &&
       aws_lambda_function.asgard_lambda_function.environment[0].variables["BEDROCK_MODEL_ID"] ==
       "us.anthropic.claude-sonnet-4-6"
@@ -199,12 +199,12 @@ check "waf_bedrock_lambda_uses_only_expected_environment_variables" {
         keys(
           aws_lambda_function.waf_bedrock_analyzer.environment[0].variables
         )
-      ) == toset([
-        "ENVIRONMENT",
-        "LOG_LEVEL",
-        "WAF_LOG_GROUP",
-        "DYNAMODB_TABLE",
-        "BEDROCK_MODEL_ID"
+        ) == toset([
+          "ENVIRONMENT",
+          "LOG_LEVEL",
+          "WAF_LOG_GROUP",
+          "DYNAMODB_TABLE",
+          "BEDROCK_MODEL_ID"
       ])
     )
 
@@ -226,10 +226,10 @@ check "waf_bedrock_lambda_environment_references_expected_resources" {
       "info"
       &&
       aws_lambda_function.waf_bedrock_analyzer.environment[0].variables["WAF_LOG_GROUP"] ==
-      aws_cloudwatch_log_group.waf_logs.name
+      aws_cloudwatch_log_group.asgard_logs.name
       &&
       aws_lambda_function.waf_bedrock_analyzer.environment[0].variables["DYNAMODB_TABLE"] ==
-      aws_dynamodb_table.dynamoDb_waf_events.name
+      aws_dynamodb_table.asgard_waf_correlation_findings.name
       &&
       aws_lambda_function.waf_bedrock_analyzer.environment[0].variables["BEDROCK_MODEL_ID"] ==
       "us.anthropic.claude-sonnet-4-6"

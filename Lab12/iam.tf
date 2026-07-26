@@ -37,26 +37,33 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
           "dynamodb:GetItem",
           "dynamodb:UpdateItem"
         ]
-        Resource = aws_dynamodb_table.waf_correlation_findings.arn
+        Resource = aws_dynamodb_table.asgard_waf_correlation_findings.arn
       },
       {
         Effect = "Allow"
         Action = [
           "dynamodb:PutItem"
         ]
-        Resource = aws_dynamodb_table.security_incidents.arn
+        Resource = aws_dynamodb_table.asgard_security_incidents.arn
       },
       {
         Effect = "Allow"
         Action = [
           "sns:Publish"
         ]
-        Resource = aws_sns_topic.critical_alerts.arn
+        Resource = aws_sns_topic.asgard_critical_alerts_topic.arn
       },
       {
         Effect = "Allow"
         Action = [
           "bedrock:InvokeModel"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:FilterLogEvents"
         ]
         Resource = "*"
       }

@@ -45,7 +45,7 @@ check "lambda_policy_uses_expected_dynamodb_permissions" {
           ])
           && contains(
             try(tolist(statement.Resource), [statement.Resource]),
-            aws_dynamodb_table.waf_correlation_findings.arn
+            aws_dynamodb_table.asgard_waf_correlation_findings.arn
           )
           && length(
             try(tolist(statement.Resource), [statement.Resource])
@@ -62,7 +62,7 @@ check "lambda_policy_uses_expected_dynamodb_permissions" {
           ])
           && contains(
             try(tolist(statement.Resource), [statement.Resource]),
-            aws_dynamodb_table.security_incidents.arn
+            aws_dynamodb_table.asgard_security_incidents.arn
           )
           && length(
             try(tolist(statement.Resource), [statement.Resource])
@@ -89,7 +89,7 @@ check "lambda_policy_limits_sns_publish_to_critical_alerts" {
         ])
         && contains(
           try(tolist(statement.Resource), [statement.Resource]),
-          aws_sns_topic.critical_alerts.arn
+          aws_sns_topic.asgard_critical_alerts_topic.arn
         )
         && length(
           try(tolist(statement.Resource), [statement.Resource])
