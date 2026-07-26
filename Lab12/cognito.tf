@@ -116,7 +116,6 @@ resource "aws_cognito_user_group" "asgard_admin_group" {
 resource "aws_cognito_user" "odin" {
     user_pool_id = aws_cognito_user_pool.asgard_pool.id
     username = "odin"
-    password = "Password123!"
 
     attributes = {
       "email" = "kevinwillocks@icloud.com"
@@ -127,7 +126,6 @@ resource "aws_cognito_user" "odin" {
 resource "aws_cognito_user" "thor" {
     user_pool_id = aws_cognito_user_pool.asgard_pool.id
     username = "thor"
-    password = "Password123!!"
 
     attributes = {
       "email" = "kevinwillocks@gmail.com"
@@ -146,4 +144,3 @@ resource "aws_cognito_user_in_group" "thor_general" {
   username     = aws_cognito_user.thor.username
   group_name   = aws_cognito_user_group.asgard_user_group.name
 }
-
