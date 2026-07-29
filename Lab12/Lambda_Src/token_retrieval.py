@@ -14,7 +14,7 @@ from datetime import datetime
 # Configuration
 # =========================
 
-CLIENT_ID = "5favaketu43pg2fdanehjjrnm4"
+CLIENT_ID = "4c30f3330eo50l3n33pgr1as63"
 AWS_DEFAULT_REGION = "us-east-1"
 
 # =========================

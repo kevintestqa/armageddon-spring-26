@@ -18,7 +18,7 @@ check "cognito_resource_server_uses_expected_scopes" {
       toset([
         for scope in aws_cognito_resource_server.asgard_resource.scope :
         scope.scope_name
-      ]) == toset([
+        ]) == toset([
         "admin-scope",
         "user-scope"
       ])
@@ -41,8 +41,8 @@ check "cognito_user_pool_requires_mfa" {
       aws_cognito_user_pool.asgard_pool.mfa_configuration == "ON"
       &&
       aws_cognito_user_pool.asgard_pool
-        .software_token_mfa_configuration[0]
-        .enabled == true
+      .software_token_mfa_configuration[0]
+      .enabled == true
     )
 
     error_message = "The Asgard Cognito user pool must require MFA and enable software-token MFA."
@@ -57,20 +57,20 @@ check "cognito_user_pool_uses_expected_password_policy" {
   assert {
     condition = (
       aws_cognito_user_pool.asgard_pool
-        .password_policy[0]
-        .minimum_length == 8
+      .password_policy[0]
+      .minimum_length == 8
       &&
       aws_cognito_user_pool.asgard_pool
-        .password_policy[0]
-        .require_uppercase == true
+      .password_policy[0]
+      .require_uppercase == true
       &&
       aws_cognito_user_pool.asgard_pool
-        .password_policy[0]
-        .require_lowercase == true
+      .password_policy[0]
+      .require_lowercase == true
       &&
       aws_cognito_user_pool.asgard_pool
-        .password_policy[0]
-        .require_symbols == false
+      .password_policy[0]
+      .require_symbols == false
     )
 
     error_message = "The Asgard Cognito password policy must require at least eight characters with uppercase and lowercase letters."
@@ -86,8 +86,8 @@ check "cognito_user_pool_auto_verifies_email" {
     condition = (
       toset(
         aws_cognito_user_pool.asgard_pool.auto_verified_attributes
-      ) == toset([
-        "email"
+        ) == toset([
+          "email"
       ])
     )
 
@@ -104,8 +104,8 @@ check "cognito_user_pool_uses_expected_recovery_methods" {
     condition = (
       length([
         for mechanism in aws_cognito_user_pool.asgard_pool
-          .account_recovery_setting[0]
-          .recovery_mechanism :
+        .account_recovery_setting[0]
+        .recovery_mechanism :
         mechanism
 
         if mechanism.name == "verified_email"
@@ -114,8 +114,8 @@ check "cognito_user_pool_uses_expected_recovery_methods" {
       &&
       length([
         for mechanism in aws_cognito_user_pool.asgard_pool
-          .account_recovery_setting[0]
-          .recovery_mechanism :
+        .account_recovery_setting[0]
+        .recovery_mechanism :
         mechanism
 
         if mechanism.name == "verified_phone_number"
@@ -138,12 +138,12 @@ check "cognito_client_uses_authorization_code_flow" {
       false
       &&
       aws_cognito_user_pool_client.asgard_client
-        .allowed_oauth_flows_user_pool_client == true
+      .allowed_oauth_flows_user_pool_client == true
       &&
       toset(
         aws_cognito_user_pool_client.asgard_client.allowed_oauth_flows
-      ) == toset([
-        "code"
+        ) == toset([
+          "code"
       ])
     )
 
@@ -160,12 +160,12 @@ check "cognito_client_uses_expected_oauth_scopes" {
     condition = (
       toset(
         aws_cognito_user_pool_client.asgard_client.allowed_oauth_scopes
-      ) == toset([
-        "email",
-        "openid",
-        "profile",
-        "${aws_cognito_resource_server.asgard_resource.identifier}/admin-scope",
-        "${aws_cognito_resource_server.asgard_resource.identifier}/user-scope"
+        ) == toset([
+          "email",
+          "openid",
+          "profile",
+          "${aws_cognito_resource_server.asgard_resource.identifier}/admin-scope",
+          "${aws_cognito_resource_server.asgard_resource.identifier}/user-scope"
       ])
     )
 
@@ -182,10 +182,10 @@ check "cognito_client_uses_expected_authentication_flows" {
     condition = (
       toset(
         aws_cognito_user_pool_client.asgard_client.explicit_auth_flows
-      ) == toset([
-        "ALLOW_USER_PASSWORD_AUTH",
-        "ALLOW_USER_SRP_AUTH",
-        "ALLOW_REFRESH_TOKEN_AUTH"
+        ) == toset([
+          "ALLOW_USER_PASSWORD_AUTH",
+          "ALLOW_USER_SRP_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH"
       ])
     )
 
@@ -225,9 +225,9 @@ check "cognito_users_use_expected_user_pool" {
       aws_cognito_user.thor.user_pool_id ==
       aws_cognito_user_pool.asgard_pool.id
       &&
-      aws_cognito_user.odin.username == "odin"
+      aws_cognito_user.odin.username == "Odin"
       &&
-      aws_cognito_user.thor.username == "thor"
+      aws_cognito_user.thor.username == "Thor"
     )
 
     error_message = "Odin and Thor must be created in the Asgard Cognito user pool with the expected usernames."

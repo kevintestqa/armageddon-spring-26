@@ -91,14 +91,14 @@ check "api_gateway_methods_use_expected_scope" {
     condition = (
       toset(
         aws_api_gateway_method.node_method.authorization_scopes
-      ) == toset([
-        "aws.cognito.signin.user.admin"
+        ) == toset([
+          "aws.cognito.signin.user.admin"
       ])
       &&
       toset(
         aws_api_gateway_method.python_method.authorization_scopes
-      ) == toset([
-        "aws.cognito.signin.user.admin"
+        ) == toset([
+          "aws.cognito.signin.user.admin"
       ])
     )
 
@@ -189,8 +189,8 @@ check "authorizer_uses_expected_configuration" {
       &&
       toset(
         aws_api_gateway_authorizer.asgard_authorizer.provider_arns
-      ) == toset([
-        aws_cognito_user_pool.asgard_pool.arn
+        ) == toset([
+          aws_cognito_user_pool.asgard_pool.arn
       ])
     )
 

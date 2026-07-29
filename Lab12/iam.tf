@@ -35,14 +35,16 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
         Effect = "Allow"
         Action = [
           "dynamodb:GetItem",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:PutItem"
         ]
         Resource = aws_dynamodb_table.asgard_waf_correlation_findings.arn
       },
       {
         Effect = "Allow"
         Action = [
-          "dynamodb:PutItem"
+          "dynamodb:PutItem",
+          "dynamodb:Scan"
         ]
         Resource = aws_dynamodb_table.asgard_security_incidents.arn
       },
@@ -66,6 +68,21 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
           "logs:FilterLogEvents"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "events:PutEvents"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Scan",
+          "dynamodb:PutItem"
+        ]
+        Resource = aws_dynamodb_table.asgard_waf_events.arn
       }
     ]
   })

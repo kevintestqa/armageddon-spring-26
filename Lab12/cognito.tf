@@ -57,6 +57,7 @@ resource "aws_cognito_user_pool" "asgard_pool" {
 resource "aws_cognito_user_pool_client" "asgard_client" {
   name                                 = "asgard_client"
   user_pool_id                         = aws_cognito_user_pool.asgard_pool.id
+  auth_session_validity                = 15
   callback_urls                        = ["https://localhost/callback"]
   logout_urls                          = ["https://localhost/logout"]
   generate_secret                      = false
@@ -76,13 +77,14 @@ resource "aws_cognito_user_pool_client" "asgard_client" {
     "ALLOW_REFRESH_TOKEN_AUTH"
   ]
 
-  //supported_identity_providers = ["COGNITO"]
+  supported_identity_providers = ["COGNITO"]
 }
 
 //login page domain for cognito user pool
 resource "aws_cognito_user_pool_domain" "asgard_domain" {
-  domain       = "asgard-domain"
-  user_pool_id = aws_cognito_user_pool.asgard_pool.id
+  domain                = "asgard-domain"
+  user_pool_id          = aws_cognito_user_pool.asgard_pool.id
+  managed_login_version = 2
 }
 
 resource "aws_cognito_managed_login_branding" "client" {
@@ -108,25 +110,25 @@ resource "aws_cognito_user_group" "asgard_admin_group" {
 }
 
 resource "aws_cognito_user" "odin" {
-    user_pool_id = aws_cognito_user_pool.asgard_pool.id
-    username = "odin"
-    password = var.odin_password
+  user_pool_id = aws_cognito_user_pool.asgard_pool.id
+  username     = "Odin"
+  password     = var.odin_password
 
-    attributes = {
-      "email" = "kevinwillocks@icloud.com"
-      email_verified = true
-    }
+  attributes = {
+    "email"        = "kevinwillocks@icloud.com"
+    email_verified = true
+  }
 }
 
 resource "aws_cognito_user" "thor" {
-    user_pool_id = aws_cognito_user_pool.asgard_pool.id
-    username = "thor"
-    password = var.thor_password
+  user_pool_id = aws_cognito_user_pool.asgard_pool.id
+  username     = "Thor"
+  password     = var.thor_password
 
-    attributes = {
-      "email" = "kevinwillocks@gmail.com"
-      email_verified = true
-    }
+  attributes = {
+    "email"        = "kevinwillocks@gmail.com"
+    email_verified = true
+  }
 }
 
 resource "aws_cognito_user_in_group" "odin_admin" {

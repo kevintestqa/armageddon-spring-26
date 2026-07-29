@@ -31,8 +31,9 @@ check "lambda_role_trusts_only_lambda_service" {
 check "lambda_policy_uses_expected_dynamodb_permissions" {
   # Given the Lambda application IAM policy,
   # when Terraform evaluates the DynamoDB permission statements,
-  # then the correlation table must allow only GetItem and UpdateItem,
-  # and the security incidents table must allow only PutItem.
+  # then the correlation findings table must allow GetItem, UpdateItem, and PutItem,
+  # and the security incidents table must allow PutItem and Scan,
+  # and the WAF events table must allow PutItem and Scan.
   assert {
     condition = (
       length([
@@ -41,7 +42,8 @@ check "lambda_policy_uses_expected_dynamodb_permissions" {
           statement.Effect == "Allow"
           && toset(try(tolist(statement.Action), [statement.Action])) == toset([
             "dynamodb:GetItem",
-            "dynamodb:UpdateItem"
+            "dynamodb:UpdateItem",
+            "dynamodb:PutItem"
           ])
           && contains(
             try(tolist(statement.Resource), [statement.Resource]),
@@ -58,7 +60,8 @@ check "lambda_policy_uses_expected_dynamodb_permissions" {
         if(
           statement.Effect == "Allow"
           && toset(try(tolist(statement.Action), [statement.Action])) == toset([
-            "dynamodb:PutItem"
+            "dynamodb:PutItem",
+            "dynamodb:Scan"
           ])
           && contains(
             try(tolist(statement.Resource), [statement.Resource]),
@@ -69,9 +72,27 @@ check "lambda_policy_uses_expected_dynamodb_permissions" {
           ) == 1
         )
       ]) == 1
+      &&
+      length([
+        for statement in local.asgard_lambda_app_policy.Statement : statement
+        if(
+          statement.Effect == "Allow"
+          && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+            "dynamodb:PutItem",
+            "dynamodb:Scan"
+          ])
+          && contains(
+            try(tolist(statement.Resource), [statement.Resource]),
+            aws_dynamodb_table.asgard_waf_events.arn
+          )
+          && length(
+            try(tolist(statement.Resource), [statement.Resource])
+          ) == 1
+        )
+      ]) == 1
     )
 
-    error_message = "The Lambda IAM policy must use only the expected DynamoDB actions on the intended tables."
+    error_message = "The Lambda IAM policy must allow GetItem, UpdateItem, and PutItem on the correlation findings table, PutItem and Scan on the security incidents table, and PutItem and Scan on the WAF events table."
   }
 }
 

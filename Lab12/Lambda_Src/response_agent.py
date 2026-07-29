@@ -1,12 +1,13 @@
-#!/usr/bin/env python3
-
 import json
 import os
-from datetime import datetime, timezone
+import uuid
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
 import boto3
+from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import BotoCoreError, ClientError
 
 
@@ -14,111 +15,75 @@ from botocore.exceptions import BotoCoreError, ClientError
 # AWS clients
 # ============================================================
 
-dynamodb = boto3.resource("dynamodb")
 bedrock_client = boto3.client("bedrock-runtime")
-sns_client = boto3.client("sns")
+dynamodb = boto3.resource("dynamodb")
+eventbridge_client = boto3.client("events")
 
 
 # ============================================================
 # Environment variables
 # ============================================================
 
+SECURITY_INCIDENTS_TABLE_NAME = os.environ[
+    "SECURITY_INCIDENTS_TABLE"
+]
+
 CORRELATION_FINDINGS_TABLE = os.environ[
     "CORRELATION_FINDINGS_TABLE"
 ]
 
-SECURITY_INCIDENTS_TABLE = os.environ[
-    "SECURITY_INCIDENTS_TABLE"
-]
-
-SNS_TOPIC_ARN = os.environ["SNS_TOPIC_ARN"]
-
 BEDROCK_MODEL_ID = os.environ.get(
     "BEDROCK_MODEL_ID",
-    #I updated the model ID
     "us.anthropic.claude-sonnet-4-6",
 )
 
-ENABLE_BEDROCK = (
-    os.environ.get("ENABLE_BEDROCK", "true").lower()
-    == "true"
+WAF_EVENTS_TABLE_NAME = os.environ[
+    "WAF_EVENTS_TABLE"
+]
+
+CORRELATION_WINDOW_MINUTES = int(
+    os.environ.get("CORRELATION_WINDOW_MINUTES", "60")
+)
+
+MINIMUM_EVENT_COUNT = int(
+    os.environ.get("MINIMUM_EVENT_COUNT", "3")
+)
+
+MAX_EVENTS = int(
+    os.environ.get("MAX_EVENTS", "500")
+)
+
+ADMIN_URI_KEYWORDS = [
+    keyword.strip().lower()
+    for keyword in os.environ.get(
+        "ADMIN_URI_KEYWORDS",
+        "admin,login,signin,auth,token,cognito",
+    ).split(",")
+    if keyword.strip()
+]
+
+security_incidents_table = dynamodb.Table(
+    SECURITY_INCIDENTS_TABLE_NAME
 )
 
 findings_table = dynamodb.Table(
     CORRELATION_FINDINGS_TABLE
 )
 
-incidents_table = dynamodb.Table(
-    SECURITY_INCIDENTS_TABLE
+waf_events_table = dynamodb.Table(
+    WAF_EVENTS_TABLE_NAME
 )
 
 
 # ============================================================
-# Playbooks
+# DynamoDB helpers
 # ============================================================
-
-PLAYBOOKS = {
-    "LOW": {
-        "name": "RECORD_ONLY",
-        "notify": False,
-        "create_incident": True,
-        "priority": 4,
-        "description": (
-            "Record the finding for historical analysis. "
-            "No immediate analyst notification is required."
-        ),
-    },
-    "MEDIUM": {
-        "name": "NOTIFY_ANALYST",
-        "notify": True,
-        "create_incident": True,
-        "priority": 3,
-        "description": (
-            "Create an incident and notify the security "
-            "operations team for review."
-        ),
-    },
-    "HIGH": {
-        "name": "CREATE_AND_ESCALATE_INCIDENT",
-        "notify": True,
-        "create_incident": True,
-        "priority": 2,
-        "description": (
-            "Create a high-priority incident and escalate "
-            "the finding to the security operations team."
-        ),
-    },
-    "CRITICAL": {
-        "name": "REQUEST_URGENT_REVIEW",
-        "notify": True,
-        "create_incident": True,
-        "priority": 1,
-        "description": (
-            "Create a critical incident and request urgent "
-            "human review. No containment action is performed."
-        ),
-    },
-}
-
-
-# ============================================================
-# General helpers
-# ============================================================
-
-def utc_now() -> str:
-    """Return the current UTC time in ISO-8601 format."""
-
-    return datetime.now(timezone.utc).isoformat()
-
 
 def decimal_to_native(value: Any) -> Any:
-    """Convert DynamoDB Decimal values to Python numbers."""
+    """Convert DynamoDB Decimal values into Python numbers."""
 
     if isinstance(value, list):
-        return [
-            decimal_to_native(item)
-            for item in value
-        ]
+        return [decimal_to_native(item) for item in value]
 
     if isinstance(value, dict):
         return {
@@ -135,251 +100,502 @@ def decimal_to_native(value: Any) -> Any:
     return value
 
 
-def normalize_severity(value: Any) -> str:
-    """Validate and normalize a severity value."""
-
-    severity = str(value or "LOW").upper()
-
-    if severity not in PLAYBOOKS:
-        print(
-            f"Unknown severity '{severity}'. "
-            "Defaulting to LOW."
-        )
-
-        return "LOW"
-
-    return severity
-
-
-# ============================================================
-# EventBridge event parsing
-# ============================================================
-
-def extract_finding_id(
-    event: dict[str, Any],
-) -> str:
+def get_recent_events(
+    window_minutes: int,
+) -> tuple[list[dict[str, Any]], datetime, datetime]:
     """
-    Extract the finding ID from an EventBridge event.
+    Read WAF records inside the correlation window.
 
-    Expected EventBridge structure:
-
-    {
-        "source": "seir.waf.correlation",
-        "detail-type": "WAF Threat Finding Created",
-        "detail": {
-            "finding_id": "..."
-        }
-    }
-
-    Direct Lambda tests may provide finding_id at the top level.
+    This first lab version uses Scan with a filter. A later version can
+    replace this with Query against a time-oriented secondary index.
     """
 
-    detail = event.get("detail", {})
-
-    finding_id = (
-        detail.get("finding_id")
-        or event.get("finding_id")
+    window_end = datetime.now(timezone.utc)
+    window_start = window_end - timedelta(
+        minutes=window_minutes
     )
 
-    if not finding_id:
-        raise ValueError(
-            "The event does not contain finding_id."
-        )
-
-    return str(finding_id)
-
-
-# ============================================================
-# Finding retrieval and validation
-# ============================================================
-
-def get_finding(
-    finding_id: str,
-) -> dict[str, Any]:
-    """Retrieve the complete correlation finding."""
-
-    print(f"Retrieving finding {finding_id}.")
-
-    response = findings_table.get_item(
-        Key={
-            "finding_id": finding_id,
-        },
-        ConsistentRead=True,
-    )
-
-    finding = response.get("Item")
-
-    if not finding:
-        raise ValueError(
-            f"Finding {finding_id} does not exist."
-        )
-
-    return decimal_to_native(finding)
-
-
-def validate_finding(
-    finding: dict[str, Any],
-) -> None:
-    """Validate that the finding can enter the SOAR workflow."""
-
-    required_fields = [
-        "finding_id",
-        "severity",
-        "created_at",
-        "bedrock_report",
-    ]
-
-    missing_fields = [
-        field
-        for field in required_fields
-        if not finding.get(field)
-    ]
-
-    if missing_fields:
-        raise ValueError(
-            "Finding is missing required fields: "
-            + ", ".join(missing_fields)
-        )
-
-    current_status = str(
-        finding.get("status", "OPEN")
-    ).upper()
-
-    completed_statuses = {
-        "RESPONSE_COMPLETED",
-        "ESCALATED",
-        "CLOSED",
-        "RESOLVED",
-    }
-
-    if current_status in completed_statuses:
-        raise AlreadyProcessedError(
-            f"Finding is already in status "
-            f"{current_status}."
-        )
-
-
-class AlreadyProcessedError(Exception):
-    """Raised when a finding has already been processed."""
-
-
-# ============================================================
-# Playbook selection
-# ============================================================
-
-def select_playbook(
-    finding: dict[str, Any],
-) -> dict[str, Any]:
-    """
-    Select a response playbook deterministically.
-
-    Bedrock does not select the playbook.
-    """
-
-    severity = normalize_severity(
-        finding.get("severity")
-    )
-
-    playbook = {
-        **PLAYBOOKS[severity],
-        "severity": severity,
-    }
+    minimum_epoch = int(window_start.timestamp())
 
     print(
-        f"Selected playbook {playbook['name']} "
-        f"for severity {severity}."
+        f"Reading WAF events from {window_start.isoformat()} "
+        f"through {window_end.isoformat()}."
     )
 
-    return playbook
+    scan_kwargs: dict[str, Any] = {
+        "FilterExpression": Attr("event_epoch").gte(
+            minimum_epoch
+        ),
+        "Limit": min(MAX_EVENTS, 100),
+    }
+
+    items: list[dict[str, Any]] = []
+
+    while True:
+        response = waf_events_table.scan(**scan_kwargs)
+
+        items.extend(response.get("Items", []))
+
+        if len(items) >= MAX_EVENTS:
+            items = items[:MAX_EVENTS]
+            break
+
+        last_evaluated_key = response.get(
+            "LastEvaluatedKey"
+        )
+
+        if not last_evaluated_key:
+            break
+
+        scan_kwargs["ExclusiveStartKey"] = (
+            last_evaluated_key
+        )
+
+    events = [
+        decimal_to_native(item)
+        for item in items
+    ]
+
+    events.sort(
+        key=lambda item: item.get("event_epoch", 0)
+    )
+
+    print(
+        f"Retrieved {len(events)} event(s) "
+        "inside the correlation window."
+    )
+
+    return events, window_start, window_end
 
 
 # ============================================================
-# Bedrock informational enrichment
+# Deterministic correlation
 # ============================================================
 
-def build_finding_context(
-    finding: dict[str, Any],
-    playbook: dict[str, Any],
+def contains_sensitive_uri(uri: str) -> bool:
+    """Return True if a URI appears identity- or admin-related."""
+
+    normalized_uri = uri.lower()
+
+    return any(
+        keyword in normalized_uri
+        for keyword in ADMIN_URI_KEYWORDS
+    )
+
+
+def calculate_risk_score(
+    event_count: int,
+    unique_uris: int,
+    unique_rules: int,
+    blocked_count: int,
+    sensitive_uri_targeted: bool,
+    active_span_minutes: float,
+) -> tuple[int, list[str]]:
+    """Create a transparent deterministic risk score."""
+
+    score = 0
+    reasons: list[str] = []
+
+    if event_count >= 5:
+        score += 20
+        reasons.append(
+            "Source generated at least five WAF events."
+        )
+
+    if event_count >= 15:
+        score += 10
+        reasons.append(
+            "Source generated at least fifteen WAF events."
+        )
+
+    if unique_uris >= 3:
+        score += 20
+        reasons.append(
+            "Source targeted at least three unique URIs."
+        )
+
+    if unique_rules >= 2:
+        score += 20
+        reasons.append(
+            "Source triggered at least two WAF rule types."
+        )
+
+    if sensitive_uri_targeted:
+        score += 15
+        reasons.append(
+            "Source targeted an identity, authentication, "
+            "or administrative URI."
+        )
+
+    if blocked_count == event_count and event_count > 0:
+        score += 5
+        reasons.append(
+            "All observed requests were blocked by WAF."
+        )
+
+    if event_count >= 5 and active_span_minutes <= 5:
+        score += 10
+        reasons.append(
+            "At least five events occurred within five minutes."
+        )
+
+    return min(score, 100), reasons
+
+
+def classify_severity(score: int) -> str:
+    """Translate risk score into a severity label."""
+
+    if score >= 80:
+        return "CRITICAL"
+
+    if score >= 60:
+        return "HIGH"
+
+    if score >= 30:
+        return "MEDIUM"
+
+    return "LOW"
+
+
+def build_source_ip_correlations(
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Group WAF events by source IP and calculate risk."""
+
+    grouped_events: dict[
+        str,
+        list[dict[str, Any]],
+    ] = defaultdict(list)
+
+    for event in events:
+        source_ip = event.get("source_ip", "UNKNOWN")
+        grouped_events[source_ip].append(event)
+
+    correlations: list[dict[str, Any]] = []
+
+    for source_ip, source_events in grouped_events.items():
+        source_events.sort(
+            key=lambda item: item.get("event_epoch", 0)
+        )
+
+        event_count = len(source_events)
+
+        blocked_count = sum(
+            1
+            for item in source_events
+            if item.get("action") == "BLOCK"
+        )
+
+        uris = {
+            item.get("uri", "UNKNOWN")
+            for item in source_events
+        }
+
+        rules = {
+            item.get("rule", "UNKNOWN")
+            for item in source_events
+        }
+
+        countries = {
+            item.get("country", "UNKNOWN")
+            for item in source_events
+        }
+
+        first_epoch = source_events[0].get(
+            "event_epoch",
+            0,
+        )
+
+        last_epoch = source_events[-1].get(
+            "event_epoch",
+            first_epoch,
+        )
+
+        active_span_seconds = max(
+            last_epoch - first_epoch,
+            0,
+        )
+
+        active_span_minutes = round(
+            active_span_seconds / 60,
+            2,
+        )
+
+        sensitive_uri_targeted = any(
+            contains_sensitive_uri(uri)
+            for uri in uris
+        )
+
+        risk_score, score_reasons = calculate_risk_score(
+            event_count=event_count,
+            unique_uris=len(uris),
+            unique_rules=len(rules),
+            blocked_count=blocked_count,
+            sensitive_uri_targeted=sensitive_uri_targeted,
+            active_span_minutes=active_span_minutes,
+        )
+
+        correlations.append(
+            {
+                "source_ip": source_ip,
+                "event_count": event_count,
+                "blocked_count": blocked_count,
+                "allowed_count": (
+                    event_count - blocked_count
+                ),
+                "unique_uris": len(uris),
+                "uris": sorted(uris),
+                "unique_rules": len(rules),
+                "rules": sorted(rules),
+                "countries": sorted(countries),
+                "first_seen": source_events[0].get(
+                    "timestamp"
+                ),
+                "last_seen": source_events[-1].get(
+                    "timestamp"
+                ),
+                "active_span_minutes": Decimal(
+                    str(active_span_minutes)
+                ),
+                "sensitive_uri_targeted": (
+                    sensitive_uri_targeted
+                ),
+                "risk_score": risk_score,
+                "severity": classify_severity(
+                    risk_score
+                ),
+                "score_reasons": score_reasons,
+            }
+        )
+
+    correlations.sort(
+        key=lambda item: (
+            item["risk_score"],
+            item["event_count"],
+        ),
+        reverse=True,
+    )
+
+    return correlations
+
+
+def build_target_correlations(
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Summarize activity by targeted URI."""
+
+    uri_events: dict[
+        str,
+        list[dict[str, Any]],
+    ] = defaultdict(list)
+
+    for event in events:
+        uri = event.get("uri", "UNKNOWN")
+        uri_events[uri].append(event)
+
+    target_correlations: list[dict[str, Any]] = []
+
+    for uri, related_events in uri_events.items():
+        source_ips = {
+            item.get("source_ip", "UNKNOWN")
+            for item in related_events
+        }
+
+        rule_counter = Counter(
+            item.get("rule", "UNKNOWN")
+            for item in related_events
+        )
+
+        most_common_rule = (
+            rule_counter.most_common(1)[0][0]
+            if rule_counter
+            else "UNKNOWN"
+        )
+
+        target_correlations.append(
+            {
+                "uri": uri,
+                "event_count": len(related_events),
+                "unique_source_ips": len(source_ips),
+                "most_common_rule": most_common_rule,
+                "sensitive_uri": contains_sensitive_uri(
+                    uri
+                ),
+            }
+        )
+
+    target_correlations.sort(
+        key=lambda item: item["event_count"],
+        reverse=True,
+    )
+
+    return target_correlations
+
+
+def build_rule_correlations(
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Summarize activity by terminating WAF rule."""
+
+    rule_events: dict[
+        str,
+        list[dict[str, Any]],
+    ] = defaultdict(list)
+
+    for event in events:
+        rule = event.get("rule", "UNKNOWN")
+        rule_events[rule].append(event)
+
+    correlations: list[dict[str, Any]] = []
+
+    for rule, related_events in rule_events.items():
+        correlations.append(
+            {
+                "rule": rule,
+                "event_count": len(related_events),
+                "unique_source_ips": len(
+                    {
+                        item.get(
+                            "source_ip",
+                            "UNKNOWN",
+                        )
+                        for item in related_events
+                    }
+                ),
+                "targeted_uris": sorted(
+                    {
+                        item.get("uri", "UNKNOWN")
+                        for item in related_events
+                    }
+                ),
+            }
+        )
+
+    correlations.sort(
+        key=lambda item: item["event_count"],
+        reverse=True,
+    )
+
+    return correlations
+
+
+def build_evidence_package(
+    events: list[dict[str, Any]],
+    window_start: datetime,
+    window_end: datetime,
 ) -> dict[str, Any]:
-    """Create a compact context object for Bedrock."""
+    """Build the compact evidence package sent to Bedrock."""
 
-    evidence = finding.get("evidence", {})
+    source_correlations = build_source_ip_correlations(events)
+    target_correlations = build_target_correlations(events)
+    rule_correlations = build_rule_correlations(events)
+
+    blocked_count = sum(
+        1
+        for item in events
+        if item.get("action") == "BLOCK"
+    )
+
+    unique_source_ips = {
+        item.get("source_ip", "UNKNOWN")
+        for item in events
+    }
+
+    unique_uris = {
+        item.get("uri", "UNKNOWN")
+        for item in events
+    }
+
+    deterministic_findings: list[str] = []
+
+    if source_correlations:
+        top_source = source_correlations[0]
+        deterministic_findings.append(
+            f"Highest-risk source IP "
+            f"{top_source['source_ip']} generated "
+            f"{top_source['event_count']} event(s), "
+            f"targeted {top_source['unique_uris']} URI(s), "
+            f"and triggered "
+            f"{top_source['unique_rules']} rule type(s)."
+        )
+
+    if target_correlations:
+        top_target = target_correlations[0]
+        deterministic_findings.append(
+            f"Most targeted URI was "
+            f"{top_target['uri']} with "
+            f"{top_target['event_count']} event(s) "
+            f"from {top_target['unique_source_ips']} "
+            "unique source IP(s)."
+        )
+
+    if rule_correlations:
+        top_rule = rule_correlations[0]
+        deterministic_findings.append(
+            f"Most frequently triggered WAF rule was "
+            f"{top_rule['rule']} with "
+            f"{top_rule['event_count']} event(s)."
+        )
 
     return {
-        "finding_id": finding.get("finding_id"),
-        "created_at": finding.get("created_at"),
-        "severity": playbook["severity"],
-        "risk_score": finding.get("risk_score"),
-        "primary_source_ip": finding.get(
-            "primary_source_ip"
-        ),
-        "primary_target": finding.get(
-            "primary_target"
-        ),
-        "event_count": finding.get(
-            "event_count"
-        ),
-        "correlation_report": finding.get(
-            "bedrock_report"
-        ),
-        "deterministic_findings": evidence.get(
-            "deterministic_findings",
-            [],
-        ),
-        "selected_playbook": {
-            "name": playbook["name"],
-            "description": playbook[
-                "description"
-            ],
+        "analysis_window": {
+            "start": window_start.isoformat(),
+            "end": window_end.isoformat(),
+            "minutes": CORRELATION_WINDOW_MINUTES,
         },
+        "summary": {
+            "total_events": len(events),
+            "blocked_events": blocked_count,
+            "allowed_events": len(events) - blocked_count,
+            "unique_source_ips": len(unique_source_ips),
+            "unique_uris": len(unique_uris),
+        },
+        "top_source_ips": source_correlations[:10],
+        "top_targeted_uris": target_correlations[:10],
+        "top_waf_rules": rule_correlations[:10],
+        "deterministic_findings": deterministic_findings,
     }
 
 
-def call_bedrock(
-    finding_context: dict[str, Any],
-) -> dict[str, Any]:
-    """
-    Generate informational response material.
+# ============================================================
+# Bedrock interpretation
+# ============================================================
 
-    Bedrock explains and formats the response.
-    It does not authorize or perform containment.
-    """
+def call_bedrock(
+    evidence_package: dict[str, Any],
+) -> str:
+    """Ask Bedrock to interpret deterministic findings."""
 
     prompt = f"""
-You are assisting a Security Operations Center.
+You are a senior SOC analyst assisting with AWS WAF threat correlation.
 
-A deterministic SOAR workflow has already selected the response
-playbook. You must not change the severity, risk score, evidence,
-or selected playbook.
+The following evidence was calculated deterministically by Python.
+Do not alter the supplied counts or risk scores.
 
-Threat finding:
-{json.dumps(finding_context, indent=2, default=str)}
+Evidence:
+{json.dumps(evidence_package, indent=2, default=str)}
 
-Create a response using exactly these headings:
+Return the response using exactly these headings:
 
-Incident Title:
-SOC Alert:
-Manager Summary:
-Analyst Investigation Checklist:
-Why This Playbook Was Selected:
-Limitations and Unknowns:
+Threat Classification:
+Overall Severity:
+Confidence:
+Correlated Indicators:
+Likely Activity:
+Business Impact:
+Recommended Analyst Actions:
+Executive Summary:
 
 Requirements:
-- Base the response only on the supplied evidence.
 - Separate observed facts from possible interpretations.
-- Do not claim that an exploit succeeded.
-- Do not claim that the source IP is malicious unless the evidence
-  explicitly proves that.
-- Do not recommend automatic IP blocking, account disabling,
-  credential revocation, or destructive containment.
-- State clearly that a human analyst must review the finding.
-- Keep the output concise and operationally useful.
+- Do not claim that exploitation succeeded.
+- Do not invent IP reputation, geolocation, identity, or attack data.
+- Explain why the events may or may not represent coordinated activity.
+- Keep the response suitable for both a SOC analyst and a manager.
 """.strip()
 
     request_body = {
-        "anthropic_version": (
-            "bedrock-2023-05-31"
-        ),
+        "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": 900,
         "temperature": 0.2,
         "messages": [
@@ -396,7 +612,7 @@ Requirements:
     }
 
     print(
-        f"Invoking Bedrock model "
+        f"Invoking Bedrock correlation model "
         f"{BEDROCK_MODEL_ID}."
     )
 
@@ -407,343 +623,192 @@ Requirements:
         body=json.dumps(request_body),
     )
 
-    response_body = json.loads(
-        response["body"].read()
-    )
+    response_body = json.loads(response["body"].read())
 
     content = response_body.get("content", [])
 
     if not content:
         raise ValueError(
-            "Bedrock returned no response content."
+            "Bedrock returned no correlation content."
         )
 
-    response_text = content[0].get("text")
+    report = content[0].get("text")
 
-    if not response_text:
+    if not report:
         raise ValueError(
-            "Bedrock response contained no text."
+            "Bedrock response did not contain report text."
         )
 
-    print("Bedrock SOAR summary generated.")
+    print("Bedrock correlation invocation successful.")
 
-    return {
-        "generated": True,
-        "model_id": BEDROCK_MODEL_ID,
-        "text": response_text,
-    }
-
-
-def create_fallback_summary(
-    finding_context: dict[str, Any],
-) -> dict[str, Any]:
-    """
-    Create a deterministic fallback if Bedrock is disabled
-    or unavailable.
-    """
-
-    severity = finding_context["severity"]
-    finding_id = finding_context["finding_id"]
-    source_ip = (
-        finding_context.get("primary_source_ip")
-        or "unknown"
-    )
-    target = (
-        finding_context.get("primary_target")
-        or "unknown"
-    )
-    event_count = (
-        finding_context.get("event_count")
-        or 0
-    )
-    playbook = finding_context[
-        "selected_playbook"
-    ]["name"]
-
-    text = f"""
-Incident Title:
-{severity} WAF Threat Finding {finding_id}
-
-SOC Alert:
-The threat-correlation workflow identified {event_count} related
-WAF event(s). The primary observed source IP was {source_ip}, and
-the primary target was {target}.
-
-Manager Summary:
-A {severity.lower()}-severity correlation finding requires review
-under playbook {playbook}.
-
-Analyst Investigation Checklist:
-1. Review the correlated WAF events.
-2. Confirm the source IP and targeted resources.
-3. Review API Gateway and application logs.
-4. Check related authentication activity.
-5. Document analyst conclusions.
-
-Why This Playbook Was Selected:
-The deterministic workflow selected {playbook} based on the
-stored severity.
-
-Limitations and Unknowns:
-This summary does not prove successful exploitation. Human review
-is required.
-""".strip()
-
-    return {
-        "generated": False,
-        "model_id": None,
-        "text": text,
-    }
+    return report
 
 
 # ============================================================
-# Incident creation
+# Finding persistence
 # ============================================================
 
-def build_incident_id(
-    finding_id: str,
+def determine_overall_risk(
+    evidence_package: dict[str, Any],
+) -> tuple[int, str, str | None]:
+    """Determine the highest deterministic risk in the window."""
+
+    source_findings = evidence_package.get(
+        "top_source_ips",
+        [],
+    )
+
+    if not source_findings:
+        return 0, "LOW", None
+
+    highest = source_findings[0]
+
+    return (
+        highest.get("risk_score", 0),
+        highest.get("severity", "LOW"),
+        highest.get("source_ip"),
+    )
+
+
+def save_finding(
+    evidence_package: dict[str, Any],
+    bedrock_report: str,
 ) -> str:
-    """
-    Build a deterministic incident ID.
+    """Store the final correlation finding."""
 
-    This helps prevent duplicate incidents when EventBridge
-    retries delivery.
-    """
+    finding_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
 
-    return f"INC-{finding_id}"
+    risk_score, severity, primary_source_ip = (
+        determine_overall_risk(evidence_package)
+    )
+
+    targeted_uris = evidence_package.get(
+        "top_targeted_uris",
+        [],
+    )
+
+    primary_target = (
+        targeted_uris[0].get("uri")
+        if targeted_uris
+        else None
+    )
+
+    item = {
+        "finding_id": finding_id,
+        "created_at": created_at,
+        "window_start": evidence_package[
+            "analysis_window"
+        ]["start"],
+        "window_end": evidence_package[
+            "analysis_window"
+        ]["end"],
+        "severity": severity,
+        "risk_score": risk_score,
+        "event_count": evidence_package["summary"][
+            "total_events"
+        ],
+        "primary_source_ip": primary_source_ip or "NONE",
+        "primary_target": primary_target or "NONE",
+        "status": "OPEN",
+        "bedrock_report": bedrock_report,
+        "evidence": evidence_package,
+    }
+
+    findings_table.put_item(Item=item)
+
+    print(
+        f"Saved correlation finding {finding_id} "
+        f"with severity {severity}."
+    )
+
+    return finding_id
 
 
-def create_incident(
-    finding: dict[str, Any],
-    playbook: dict[str, Any],
-    response_summary: dict[str, Any],
-) -> tuple[str, bool]:
-    """
-    Create the incident record.
+def save_security_incident(
+    finding_id: str,
+    evidence_package: dict[str, Any],
+    bedrock_report: str,
+) -> str:
+    """Store a security incident created from a correlation finding."""
 
-    Returns:
-        incident_id
-        True if newly created, False if already present
-    """
+    incident_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
 
-    finding_id = finding["finding_id"]
-    incident_id = build_incident_id(finding_id)
-    now = utc_now()
+    risk_score, severity, primary_source_ip = (
+        determine_overall_risk(evidence_package)
+    )
 
-    incident = {
+    targeted_uris = evidence_package.get(
+        "top_targeted_uris",
+        [],
+    )
+
+    primary_target = (
+        targeted_uris[0].get("uri")
+        if targeted_uris
+        else None
+    )
+
+    item = {
         "incident_id": incident_id,
         "finding_id": finding_id,
-        "created_at": now,
-        "updated_at": now,
-        "severity": playbook["severity"],
-        "priority": playbook["priority"],
-        "status": "OPEN",
-        "assigned_team": "SOC",
-        "playbook": playbook["name"],
-        "playbook_description": playbook[
-            "description"
-        ],
-        "primary_source_ip": finding.get(
-            "primary_source_ip",
-            "UNKNOWN",
-        ),
-        "primary_target": finding.get(
-            "primary_target",
-            "UNKNOWN",
-        ),
-        "event_count": finding.get(
-            "event_count",
-            0,
-        ),
-        "risk_score": finding.get(
-            "risk_score",
-            0,
-        ),
-        "analyst_summary": response_summary[
-            "text"
-        ],
-        "bedrock_summary_generated": (
-            response_summary["generated"]
-        ),
-        "bedrock_model_id": (
-            response_summary["model_id"]
-            or "NONE"
-        ),
-        "containment_performed": False,
-        "human_review_required": True,
-    }
-
-    try:
-        incidents_table.put_item(
-            Item=incident,
-            ConditionExpression=(
-                "attribute_not_exists(incident_id)"
-            ),
-        )
-
-        print(
-            f"Created security incident "
-            f"{incident_id}."
-        )
-
-        return incident_id, True
-
-    except ClientError as error:
-        error_code = error.response.get(
-            "Error",
-            {},
-        ).get("Code")
-
-        if (
-            error_code
-            == "ConditionalCheckFailedException"
-        ):
-            print(
-                f"Incident {incident_id} already "
-                "exists. Reusing existing incident."
-            )
-
-            return incident_id, False
-
-        raise
-
-
-# ============================================================
-# SNS notification
-# ============================================================
-
-def publish_notification(
-    finding: dict[str, Any],
-    incident_id: str,
-    playbook: dict[str, Any],
-    response_summary: dict[str, Any],
-) -> str | None:
-    """Publish an informational SOC notification."""
-
-    if not playbook["notify"]:
-        print(
-            f"Playbook {playbook['name']} does "
-            "not require an SNS notification."
-        )
-
-        return None
-
-    severity = playbook["severity"]
-
-    subject = (
-        f"[{severity}] WAF Security Incident "
-        f"{incident_id}"
-    )
-
-    message = {
-        "incident_id": incident_id,
-        "finding_id": finding["finding_id"],
+        "created_at": created_at,
         "severity": severity,
-        "risk_score": finding.get(
-            "risk_score"
-        ),
-        "playbook": playbook["name"],
-        "source_ip": finding.get(
-            "primary_source_ip"
-        ),
-        "target": finding.get(
-            "primary_target"
-        ),
-        "event_count": finding.get(
-            "event_count"
-        ),
-        "human_review_required": True,
-        "containment_performed": False,
-        "analyst_summary": response_summary[
-            "text"
+        "risk_score": risk_score,
+        "status": "OPEN",
+        "primary_source_ip": primary_source_ip or "NONE",
+        "primary_target": primary_target or "NONE",
+        "event_count": evidence_package["summary"][
+            "total_events"
         ],
+        "bedrock_report": bedrock_report,
     }
 
-    response = sns_client.publish(
-        TopicArn=SNS_TOPIC_ARN,
-        Subject=subject[:100],
-        Message=json.dumps(
-            message,
-            indent=2,
-            default=str,
-        ),
-        MessageAttributes={
-            "severity": {
-                "DataType": "String",
-                "StringValue": severity,
-            },
-            "playbook": {
-                "DataType": "String",
-                "StringValue": playbook[
-                    "name"
-                ],
-            },
-        },
-    )
-
-    message_id = response.get("MessageId")
+    security_incidents_table.put_item(Item=item)
 
     print(
-        f"Published SNS notification "
-        f"{message_id}."
+        f"Saved security incident {incident_id} "
+        f"for finding {finding_id}."
     )
 
-    return message_id
+    return incident_id
 
 
 # ============================================================
-# Finding workflow update
+# Publish finding event to EventBridge
 # ============================================================
 
-def update_finding_status(
+def publish_finding_event(
     finding_id: str,
-    incident_id: str,
-    playbook: dict[str, Any],
-    sns_message_id: str | None,
+    severity: str,
+    risk_score: int,
+    primary_source_ip: str | None,
 ) -> None:
-    """Mark the finding as processed by the SOAR workflow."""
+    """Publish the new finding metadata to EventBridge."""
 
-    now = utc_now()
-
-    expression_values = {
-        ":response_status": (
-            "RESPONSE_COMPLETED"
-        ),
-        ":incident_id": incident_id,
-        ":playbook": playbook["name"],
-        ":processed_at": now,
-        ":sns_message_id": (
-            sns_message_id or "NOT_SENT"
-        ),
-        ":open_status": "OPEN",
-    }
-
-    findings_table.update_item(
-        Key={
-            "finding_id": finding_id,
-        },
-        UpdateExpression=(
-            "SET #status = :response_status, "
-            "incident_id = :incident_id, "
-            "response_playbook = :playbook, "
-            "response_processed_at = :processed_at, "
-            "sns_message_id = :sns_message_id"
-        ),
-        ConditionExpression=(
-            "attribute_not_exists(#status) "
-            "OR #status = :open_status"
-        ),
-        ExpressionAttributeNames={
-            "#status": "status",
-        },
-        ExpressionAttributeValues=(
-            expression_values
-        ),
+    response = eventbridge_client.put_events(
+        Entries=[
+            {
+                "Source": "seir.waf.correlation",
+                "DetailType": "WAF Threat Finding Created",
+                "Detail": json.dumps(
+                    {
+                        "finding_id": finding_id,
+                        "severity": severity,
+                        "risk_score": risk_score,
+                        "primary_source_ip": (
+                            primary_source_ip or "NONE"
+                        ),
+                    }
+                ),
+            }
+        ]
     )
 
     print(
-        f"Updated finding {finding_id} to "
-        "RESPONSE_COMPLETED."
+        "EventBridge response:",
+        json.dumps(response, indent=2)
     )
 
 
@@ -755,168 +820,123 @@ def lambda_handler(
     event: dict[str, Any],
     context: Any,
 ) -> dict[str, Any]:
-    """Process a correlated threat finding."""
+    """Correlate recent WAF telemetry and generate a finding."""
 
     print("=" * 60)
-    print("Starting SOAR Response Agent")
+    print("Starting WAF Threat Correlation Agent")
     print("=" * 60)
 
-    print("Received event:")
-    print(
-        json.dumps(
-            event,
-            indent=2,
-            default=str,
-        )
+    requested_window = event.get(
+        "correlation_window_minutes"
+    )
+
+    window_minutes = (
+        int(requested_window)
+        if requested_window is not None
+        else CORRELATION_WINDOW_MINUTES
     )
 
     try:
-        finding_id = extract_finding_id(event)
+        events, window_start, window_end = (
+            get_recent_events(window_minutes)
+        )
 
-        finding = get_finding(finding_id)
+        if len(events) < MINIMUM_EVENT_COUNT:
+            message = (
+                f"Only {len(events)} event(s) found. "
+                f"At least {MINIMUM_EVENT_COUNT} are "
+                "required for correlation."
+            )
 
-        print("Retrieved finding:")
+            print(message)
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps(
+                    {
+                        "message": message,
+                        "events_found": len(events),
+                        "finding_created": False,
+                    }
+                ),
+            }
+
+        evidence_package = build_evidence_package(
+            events=events,
+            window_start=window_start,
+            window_end=window_end,
+        )
+
+        print("\n===== DETERMINISTIC EVIDENCE =====")
         print(
             json.dumps(
-                finding,
+                evidence_package,
                 indent=2,
                 default=str,
             )
         )
+        print("==================================\n")
 
-        validate_finding(finding)
-
-        playbook = select_playbook(finding)
-
-        finding_context = build_finding_context(
-            finding=finding,
-            playbook=playbook,
+        bedrock_report = call_bedrock(
+            evidence_package
         )
 
-        if ENABLE_BEDROCK:
-            try:
-                response_summary = call_bedrock(
-                    finding_context
-                )
-
-            except Exception as bedrock_error:
-                print(
-                    "Bedrock enrichment failed. "
-                    "Using deterministic fallback."
-                )
-                print(
-                    f"Bedrock error: "
-                    f"{type(bedrock_error).__name__}: "
-                    f"{bedrock_error}"
-                )
-
-                response_summary = (
-                    create_fallback_summary(
-                        finding_context
-                    )
-                )
-
-        else:
-            print(
-                "Bedrock enrichment is disabled. "
-                "Using deterministic fallback."
-            )
-
-            response_summary = (
-                create_fallback_summary(
-                    finding_context
-                )
-            )
-
-        print("\n===== SOAR RESPONSE SUMMARY =====")
-        print(response_summary["text"])
+        print("\n===== BEDROCK THREAT REPORT =====")
+        print(bedrock_report)
         print("=================================\n")
 
-        incident_id, incident_created = (
-            create_incident(
-                finding=finding,
-                playbook=playbook,
-                response_summary=response_summary,
-            )
+        finding_id = save_finding(
+            evidence_package=evidence_package,
+            bedrock_report=bedrock_report,
         )
 
-        sns_message_id = publish_notification(
-            finding=finding,
-            incident_id=incident_id,
-            playbook=playbook,
-            response_summary=response_summary,
-        )
-
-        update_finding_status(
+        incident_id = save_security_incident(
             finding_id=finding_id,
-            incident_id=incident_id,
-            playbook=playbook,
-            sns_message_id=sns_message_id,
+            evidence_package=evidence_package,
+            bedrock_report=bedrock_report,
+        )
+
+        risk_score, severity, primary_source_ip = (
+            determine_overall_risk(evidence_package)
+        )
+
+        publish_finding_event(
+            finding_id=finding_id,
+            severity=severity,
+            risk_score=risk_score,
+            primary_source_ip=primary_source_ip,
         )
 
         result = {
-            "message": (
-                "SOAR response workflow completed."
-            ),
+            "message": "Threat correlation completed.",
+            "finding_created": True,
             "finding_id": finding_id,
             "incident_id": incident_id,
-            "incident_created": incident_created,
-            "severity": playbook["severity"],
-            "playbook": playbook["name"],
-            "notification_sent": (
-                sns_message_id is not None
-            ),
-            "sns_message_id": sns_message_id,
-            "bedrock_summary_generated": (
-                response_summary["generated"]
-            ),
-            "containment_performed": False,
-            "human_review_required": True,
+            "events_correlated": len(events),
+            "severity": severity,
+            "risk_score": risk_score,
+            "primary_source_ip": primary_source_ip,
         }
 
-        print("SOAR workflow result:")
-        print(
-            json.dumps(
-                result,
-                indent=2,
-                default=str,
-            )
-        )
+        print("Correlation result:")
+        print(json.dumps(result, indent=2))
 
         return {
             "statusCode": 200,
             "body": json.dumps(result),
         }
 
-    except AlreadyProcessedError as error:
-        print(str(error))
-
-        return {
-            "statusCode": 200,
-            "body": json.dumps(
-                {
-                    "message": str(error),
-                    "workflow_skipped": True,
-                }
-            ),
-        }
-
-    except (
-        ClientError,
-        BotoCoreError,
-    ) as error:
-        print(
-            f"AWS service error: "
-            f"{type(error).__name__}: {error}"
-        )
+    except (ClientError, BotoCoreError) as error:
+        print(f"AWS service error: {error}")
 
         return {
             "statusCode": 500,
             "body": json.dumps(
                 {
                     "message": (
-                        "SOAR workflow failed because "
-                        "an AWS service returned an error."
+                        "Threat correlation failed "
+                        "because an AWS service returned "
+                        "an error."
                     ),
                     "error": str(error),
                 }
@@ -925,7 +945,7 @@ def lambda_handler(
 
     except Exception as error:
         print(
-            f"Unexpected SOAR error: "
+            f"Unexpected correlation error: "
             f"{type(error).__name__}: {error}"
         )
 
@@ -933,9 +953,7 @@ def lambda_handler(
             "statusCode": 500,
             "body": json.dumps(
                 {
-                    "message": (
-                        "SOAR response workflow failed."
-                    ),
+                    "message": "Threat correlation failed.",
                     "error": str(error),
                 }
             ),

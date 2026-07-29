@@ -10,6 +10,7 @@ resource "aws_lambda_function" "asgard_lambda_function" {
   role          = aws_iam_role.asgard_lambda_role.arn
   handler       = "response_agent.lambda_handler"
   code_sha256   = data.archive_file.asgard_lambda_function.output_base64sha256
+  timeout       = 60
 
   runtime = "python3.14"
 
@@ -17,11 +18,8 @@ resource "aws_lambda_function" "asgard_lambda_function" {
     variables = {
       CORRELATION_FINDINGS_TABLE = aws_dynamodb_table.asgard_waf_correlation_findings.name
       SECURITY_INCIDENTS_TABLE   = aws_dynamodb_table.asgard_security_incidents.name
+      WAF_EVENTS_TABLE           = aws_dynamodb_table.asgard_waf_events.name
       SNS_TOPIC_ARN              = aws_sns_topic.asgard_critical_alerts_topic.arn
-
-      //May need to add these as environment variables in the response_agent.py file:
-      # SNS_TOPIC_ARN_MEDIUM       = aws_sns_topic.asgard_medium_high_alerts_topic.arn
-      # LOG_GROUP_NAME             = aws_cloudwatch_log_group.asgard_lambda_logs.name
 
       BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
       ENABLE_BEDROCK   = "true"
@@ -43,8 +41,8 @@ resource "aws_lambda_function" "waf_bedrock_analyzer" {
     variables = {
       ENVIRONMENT      = "production"
       LOG_LEVEL        = "info"
-      WAF_LOG_GROUP    = aws_cloudwatch_log_group.asgard_logs.name
-      DYNAMODB_TABLE   = aws_dynamodb_table.asgard_waf_correlation_findings.name
+      WAF_LOG_GROUP    = aws_cloudwatch_log_group.asgard_waf_logs.name
+      DYNAMODB_TABLE   = aws_dynamodb_table.asgard_waf_events.name
       BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
     }
   }

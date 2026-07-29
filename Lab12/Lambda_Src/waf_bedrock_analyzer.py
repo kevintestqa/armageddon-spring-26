@@ -27,7 +27,7 @@ DYNAMODB_TABLE = os.environ["DYNAMODB_TABLE"]
 
 BEDROCK_MODEL_ID = os.environ.get(
     "BEDROCK_MODEL_ID",
-    "anthropic.claude-3-haiku-20240307-v1:0",
+    "us.anthropic.claude-sonnet-4-6",
 )
 
 LOOKBACK_MINUTES = int(os.environ.get("LOOKBACK_MINUTES", "10"))
