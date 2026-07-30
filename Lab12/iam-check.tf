@@ -83,7 +83,8 @@ check "lambda_policy_limits_sns_publish_to_critical_alerts" {
     condition = length([
       for statement in local.asgard_lambda_app_policy.Statement : statement
       if(
-        statement.Effect == "Allow"
+        try(statement.Sid, "") == "PublishCriticalAlerts"
+        && statement.Effect == "Allow"
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "sns:Publish"
         ])
@@ -105,12 +106,12 @@ check "lambda_policy_allows_only_bedrock_model_invocation" {
     condition = length([
       for statement in local.asgard_lambda_app_policy.Statement : statement
       if(
-        statement.Effect == "Allow"
+        try(statement.Sid, "") == "InvokeBedrockModel"
+        && statement.Effect == "Allow"
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "bedrock:InvokeModel"
         ])
-        && try(statement.Resource, "") ==
-        data.aws_cloudwatch_event_bus.default.arn
+        && try(statement.Resource, "") == "*"
       )
     ]) == 1
 
@@ -127,7 +128,8 @@ check "lambda_app_policy_allows_filter_log_events" {
     condition = length([
       for statement in local.asgard_lambda_app_policy.Statement : statement
       if(
-        statement.Effect == "Allow"
+        try(statement.Sid, "") == "FilterCloudWatchLogs"
+        && statement.Effect == "Allow"
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "logs:FilterLogEvents"
         ])
@@ -142,21 +144,23 @@ check "lambda_app_policy_allows_filter_log_events" {
 check "lambda_policy_allows_eventbridge_put_events" {
   # Given the Lambda application IAM policy,
   # when Terraform evaluates the EventBridge permission statement,
-  # then the Lambda role must be allowed to submit events.
+  # then the Lambda role must be allowed to submit events to the default event bus.
 
   assert {
     condition = length([
       for statement in local.asgard_lambda_app_policy.Statement : statement
       if(
-        statement.Effect == "Allow"
+        try(statement.Sid, "") == "PublishSecurityEvents"
+        && statement.Effect == "Allow"
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "events:PutEvents"
         ])
-        && try(statement.Resource, "") == "*"
+        && try(statement.Resource, "") ==
+        data.aws_cloudwatch_event_bus.default.arn
       )
     ]) == 1
 
-    error_message = "The Lambda IAM policy must allow events:PutEvents."
+    error_message = "The Lambda IAM policy must allow events:PutEvents only on the default EventBridge bus."
   }
 }
 
@@ -169,7 +173,8 @@ check "lambda_policy_limits_report_uploads_to_expected_prefix" {
     condition = length([
       for statement in local.asgard_lambda_app_policy.Statement : statement
       if(
-        statement.Effect == "Allow"
+        try(statement.Sid, "") == "UploadExecutiveReports"
+        && statement.Effect == "Allow"
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "s3:PutObject"
         ])

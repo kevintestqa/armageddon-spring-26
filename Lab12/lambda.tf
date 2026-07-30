@@ -121,6 +121,7 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
   code_sha256   = data.archive_file.executive_dashboard_agent.output_base64sha256
 
   runtime     = "python3.14"
+  architectures = ["x86_64"] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
   timeout     = 120
   memory_size = 512
   ephemeral_storage {
