@@ -109,7 +109,8 @@ check "lambda_policy_allows_only_bedrock_model_invocation" {
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "bedrock:InvokeModel"
         ])
-        && try(statement.Resource, "") == "*"
+        && try(statement.Resource, "") ==
+        data.aws_cloudwatch_event_bus.default.arn
       )
     ]) == 1
 

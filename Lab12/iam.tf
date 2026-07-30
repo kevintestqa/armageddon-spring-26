@@ -103,7 +103,7 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
           "events:PutEvents"
         ]
 
-        Resource = "*"
+        Resource = data.aws_cloudwatch_event_bus.default.arn
       },
       {
         Sid    = "UploadExecutiveReports"

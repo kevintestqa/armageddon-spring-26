@@ -1,3 +1,7 @@
+data "aws_cloudwatch_event_bus" "default" {
+  name = "default"
+}
+
 resource "aws_cloudwatch_event_rule" "asgard_medium_high_findings" {
   name = "soar-medium-high-findings"
 
