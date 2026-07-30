@@ -51,30 +51,8 @@ check "lambda_uses_expected_runtime_and_handler" {
   }
 }
 
-check "lambda_uses_only_expected_environment_variables" {
-  # Given the response agent configuration requirements,
-  # when Terraform evaluates the Lambda environment variable names,
-  # then the function must contain only the five required variables.
-
-  assert {
-    condition = toset(
-      keys(
-        aws_lambda_function.asgard_lambda_function.environment[0].variables
-      )
-      ) == toset([
-        "CORRELATION_FINDINGS_TABLE",
-        "SECURITY_INCIDENTS_TABLE",
-        "SNS_TOPIC_ARN",
-        "BEDROCK_MODEL_ID",
-        "ENABLE_BEDROCK"
-    ])
-
-    error_message = "The Asgard Lambda function must contain only the required DynamoDB, SNS, and Bedrock environment variables."
-  }
-}
-
 check "lambda_environment_variables_reference_expected_resources" {
-  # Given the DynamoDB tables, SNS topic, and Bedrock configuration,
+  # Given the DynamoDB tables, WAF events table, SNS topic, and Bedrock configuration,
   # when Terraform evaluates the Lambda environment variable values,
   # then each variable must reference the intended resource or approved value.
 
@@ -85,6 +63,9 @@ check "lambda_environment_variables_reference_expected_resources" {
       &&
       aws_lambda_function.asgard_lambda_function.environment[0].variables["SECURITY_INCIDENTS_TABLE"] ==
       aws_dynamodb_table.asgard_security_incidents.name
+      &&
+      aws_lambda_function.asgard_lambda_function.environment[0].variables["WAF_EVENTS_TABLE"] ==
+      aws_dynamodb_table.asgard_waf_events.name
       &&
       aws_lambda_function.asgard_lambda_function.environment[0].variables["SNS_TOPIC_ARN"] ==
       aws_sns_topic.asgard_critical_alerts_topic.arn
@@ -188,27 +169,26 @@ check "waf_bedrock_lambda_timeout_is_60_seconds" {
   }
 }
 
-check "waf_bedrock_lambda_uses_only_expected_environment_variables" {
-  # Given the analyzer Lambda,
-  # when Terraform evaluates the environment variable names,
-  # then only the approved variables may exist.
+check "lambda_uses_only_expected_environment_variables" {
+  # Given the response agent configuration requirements,
+  # when Terraform evaluates the Lambda environment variable names,
+  # then the function must contain only the six required variables.
 
   assert {
-    condition = (
-      toset(
-        keys(
-          aws_lambda_function.waf_bedrock_analyzer.environment[0].variables
-        )
-        ) == toset([
-          "ENVIRONMENT",
-          "LOG_LEVEL",
-          "WAF_LOG_GROUP",
-          "DYNAMODB_TABLE",
-          "BEDROCK_MODEL_ID"
-      ])
-    )
+    condition = toset(
+      keys(
+        aws_lambda_function.asgard_lambda_function.environment[0].variables
+      )
+      ) == toset([
+        "CORRELATION_FINDINGS_TABLE",
+        "SECURITY_INCIDENTS_TABLE",
+        "WAF_EVENTS_TABLE",
+        "SNS_TOPIC_ARN",
+        "BEDROCK_MODEL_ID",
+        "ENABLE_BEDROCK"
+    ])
 
-    error_message = "The WAF Bedrock analyzer Lambda contains unexpected environment variables."
+    error_message = "The Asgard Lambda function must contain only the required DynamoDB, SNS, and Bedrock environment variables."
   }
 }
 
@@ -226,10 +206,10 @@ check "waf_bedrock_lambda_environment_references_expected_resources" {
       "info"
       &&
       aws_lambda_function.waf_bedrock_analyzer.environment[0].variables["WAF_LOG_GROUP"] ==
-      aws_cloudwatch_log_group.asgard_logs.name
+      aws_cloudwatch_log_group.asgard_waf_logs.name
       &&
       aws_lambda_function.waf_bedrock_analyzer.environment[0].variables["DYNAMODB_TABLE"] ==
-      aws_dynamodb_table.asgard_waf_correlation_findings.name
+      aws_dynamodb_table.asgard_waf_events.name
       &&
       aws_lambda_function.waf_bedrock_analyzer.environment[0].variables["BEDROCK_MODEL_ID"] ==
       "us.anthropic.claude-sonnet-4-6"
@@ -414,5 +394,172 @@ check "python_auth_uses_expected_environment_variables" {
     )
 
     error_message = "The Python authentication Lambda must use ENVIRONMENT=production and LOG_LEVEL=info with no unexpected environment variables."
+  }
+}
+
+###############################################################################
+# Executive Dashboard Agent Checks
+###############################################################################
+
+check "executive_dashboard_archive_uses_expected_source" {
+  # Given the Executive Dashboard Lambda package,
+  # when Terraform evaluates the archive configuration,
+  # then it must package the expected directory into the expected ZIP file.
+
+  assert {
+    condition = (
+      data.archive_file.executive_dashboard_agent.type == "zip"
+      &&
+      data.archive_file.executive_dashboard_agent.source_dir ==
+      "${path.module}/Lambda_Src/executive_dashboard_package"
+      &&
+      data.archive_file.executive_dashboard_agent.output_path ==
+      "${path.module}/Lambda_Src/executive_dashboard_agent.zip"
+    )
+
+    error_message = "The Executive Dashboard archive must package the expected directory into the expected ZIP file."
+  }
+}
+
+check "executive_dashboard_lambda_uses_expected_package" {
+  # Given the Executive Dashboard deployment package,
+  # when Terraform evaluates the Lambda deployment package,
+  # then it must use the generated ZIP archive and matching source hash.
+
+  assert {
+    condition = (
+      aws_lambda_function.executive_dashboard_agent.filename ==
+      data.archive_file.executive_dashboard_agent.output_path
+      &&
+      aws_lambda_function.executive_dashboard_agent.code_sha256 ==
+      data.archive_file.executive_dashboard_agent.output_base64sha256
+    )
+
+    error_message = "The Executive Dashboard Lambda must use the generated deployment package."
+  }
+}
+
+check "executive_dashboard_lambda_uses_expected_execution_role" {
+  # Given the Executive Dashboard Lambda,
+  # when Terraform evaluates its execution role,
+  # then it must use the Asgard Lambda IAM role.
+
+  assert {
+    condition = (
+      aws_lambda_function.executive_dashboard_agent.role ==
+      aws_iam_role.asgard_lambda_role.arn
+    )
+
+    error_message = "The Executive Dashboard Lambda must use the Asgard Lambda execution role."
+  }
+}
+
+check "executive_dashboard_lambda_uses_expected_runtime_and_handler" {
+  # Given the Executive Dashboard Lambda,
+  # when Terraform evaluates the runtime and handler,
+  # then it must use Python 3.14 and executive_dashboard_agent.lambda_handler.
+
+  assert {
+    condition = (
+      aws_lambda_function.executive_dashboard_agent.runtime == "python3.14"
+      &&
+      aws_lambda_function.executive_dashboard_agent.handler ==
+      "executive_dashboard_agent.lambda_handler"
+    )
+
+    error_message = "The Executive Dashboard Lambda must use runtime python3.14 and handler executive_dashboard_agent.lambda_handler."
+  }
+}
+
+check "executive_dashboard_lambda_uses_expected_compute_settings" {
+  # Given the Executive Dashboard Lambda,
+  # when Terraform evaluates the compute configuration,
+  # then it must use the approved timeout, memory, and ephemeral storage values.
+
+  assert {
+    condition = (
+      aws_lambda_function.executive_dashboard_agent.timeout == 120
+      &&
+      aws_lambda_function.executive_dashboard_agent.memory_size == 512
+      &&
+      aws_lambda_function.executive_dashboard_agent.ephemeral_storage[0].size == 512
+    )
+
+    error_message = "The Executive Dashboard Lambda must use a 120 second timeout, 512 MB memory, and 512 MB ephemeral storage."
+  }
+}
+
+check "executive_dashboard_lambda_uses_only_expected_environment_variables" {
+  # Given the Executive Dashboard Lambda,
+  # when Terraform evaluates the environment variable names,
+  # then only the approved variables may exist.
+
+  assert {
+    condition = (
+      toset(
+        keys(
+          aws_lambda_function.executive_dashboard_agent.environment[0].variables
+        )
+        ) == toset([
+          "WAF_EVENTS_TABLE",
+          "CORRELATION_FINDINGS_TABLE",
+          "SECURITY_INCIDENTS_TABLE",
+          "REPORT_BUCKET",
+          "REPORT_PREFIX",
+          "BEDROCK_MODEL_ID",
+          "ENABLE_BEDROCK",
+          "REPORT_PERIOD_HOURS",
+          "MAX_ITEMS_PER_TABLE",
+          "ORGANIZATION_NAME",
+          "REPORT_TITLE"
+      ])
+    )
+
+    error_message = "The Executive Dashboard Lambda contains unexpected environment variables."
+  }
+}
+
+check "executive_dashboard_lambda_environment_references_expected_resources" {
+  # Given the Executive Dashboard Lambda,
+  # when Terraform evaluates the environment variable values,
+  # then each variable must reference the expected resource or approved value.
+
+  assert {
+    condition = (
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["WAF_EVENTS_TABLE"] ==
+      aws_dynamodb_table.asgard_waf_events.name
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["CORRELATION_FINDINGS_TABLE"] ==
+      aws_dynamodb_table.asgard_waf_correlation_findings.name
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["SECURITY_INCIDENTS_TABLE"] ==
+      aws_dynamodb_table.asgard_security_incidents.name
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["REPORT_BUCKET"] ==
+      aws_s3_bucket.asgard_executive_report.bucket
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["REPORT_PREFIX"] ==
+      "executive-reports"
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["BEDROCK_MODEL_ID"] ==
+      "us.anthropic.claude-sonnet-4-6"
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["ENABLE_BEDROCK"] ==
+      "true"
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["REPORT_PERIOD_HOURS"] ==
+      "24"
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["MAX_ITEMS_PER_TABLE"] ==
+      "5000"
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["ORGANIZATION_NAME"] ==
+      "Asgard Cloud Security"
+      &&
+      aws_lambda_function.executive_dashboard_agent.environment[0].variables["REPORT_TITLE"] ==
+      "Executive Security Report"
+    )
+
+    error_message = "The Executive Dashboard Lambda environment variables must reference the expected resources and approved values."
   }
 }

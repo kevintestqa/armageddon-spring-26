@@ -12,6 +12,7 @@ check "lambda_role_trusts_only_lambda_service" {
   # Given the Lambda execution role trust policy,
   # when Terraform evaluates the trusted principal and allowed action,
   # then only the Lambda service may assume the role through sts:AssumeRole.
+
   assert {
     condition = (
       length(local.asgard_lambda_trust_policy.Statement) == 1
@@ -31,68 +32,45 @@ check "lambda_role_trusts_only_lambda_service" {
 check "lambda_policy_uses_expected_dynamodb_permissions" {
   # Given the Lambda application IAM policy,
   # when Terraform evaluates the DynamoDB permission statements,
-  # then the correlation findings table must allow GetItem, UpdateItem, and PutItem,
-  # and the security incidents table must allow PutItem and Scan,
-  # and the WAF events table must allow PutItem and Scan.
+  # then correlation findings must allow GetItem, UpdateItem, PutItem, and Scan,
+  # while security incidents and WAF events must share PutItem and Scan permissions.
+
   assert {
     condition = (
       length([
         for statement in local.asgard_lambda_app_policy.Statement : statement
         if(
-          statement.Effect == "Allow"
+          try(statement.Sid, "") == "ManageCorrelationFindings"
+          && statement.Effect == "Allow"
           && toset(try(tolist(statement.Action), [statement.Action])) == toset([
             "dynamodb:GetItem",
             "dynamodb:UpdateItem",
-            "dynamodb:PutItem"
+            "dynamodb:PutItem",
+            "dynamodb:Scan"
           ])
-          && contains(
-            try(tolist(statement.Resource), [statement.Resource]),
-            aws_dynamodb_table.asgard_waf_correlation_findings.arn
-          )
-          && length(
-            try(tolist(statement.Resource), [statement.Resource])
-          ) == 1
+          && try(statement.Resource, "") ==
+          aws_dynamodb_table.asgard_waf_correlation_findings.arn
         )
       ]) == 1
       &&
       length([
         for statement in local.asgard_lambda_app_policy.Statement : statement
         if(
-          statement.Effect == "Allow"
+          try(statement.Sid, "") == "WriteAndScanSecurityData"
+          && statement.Effect == "Allow"
           && toset(try(tolist(statement.Action), [statement.Action])) == toset([
             "dynamodb:PutItem",
             "dynamodb:Scan"
           ])
-          && contains(
-            try(tolist(statement.Resource), [statement.Resource]),
-            aws_dynamodb_table.asgard_security_incidents.arn
-          )
-          && length(
-            try(tolist(statement.Resource), [statement.Resource])
-          ) == 1
-        )
-      ]) == 1
-      &&
-      length([
-        for statement in local.asgard_lambda_app_policy.Statement : statement
-        if(
-          statement.Effect == "Allow"
-          && toset(try(tolist(statement.Action), [statement.Action])) == toset([
-            "dynamodb:PutItem",
-            "dynamodb:Scan"
-          ])
-          && contains(
-            try(tolist(statement.Resource), [statement.Resource]),
+          && toset(try(tolist(statement.Resource), [statement.Resource])) == toset([
+            aws_dynamodb_table.asgard_security_incidents.arn,
             aws_dynamodb_table.asgard_waf_events.arn
-          )
-          && length(
-            try(tolist(statement.Resource), [statement.Resource])
-          ) == 1
+          ])
         )
       ]) == 1
     )
 
-    error_message = "The Lambda IAM policy must allow GetItem, UpdateItem, and PutItem on the correlation findings table, PutItem and Scan on the security incidents table, and PutItem and Scan on the WAF events table."
+    error_message = "The Lambda IAM policy must grant the expected least-privilege DynamoDB permissions to the Asgard tables."
   }
 }
 
@@ -100,21 +78,18 @@ check "lambda_policy_limits_sns_publish_to_critical_alerts" {
   # Given the Lambda application IAM policy,
   # when Terraform evaluates the SNS permission statement,
   # then Lambda may publish only to the critical alerts topic.
+
   assert {
     condition = length([
       for statement in local.asgard_lambda_app_policy.Statement : statement
       if(
-        statement.Effect == "Allow"
+        try(statement.Sid, "") == "PublishCriticalAlerts"
+        && statement.Effect == "Allow"
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "sns:Publish"
         ])
-        && contains(
-          try(tolist(statement.Resource), [statement.Resource]),
-          aws_sns_topic.asgard_critical_alerts_topic.arn
-        )
-        && length(
-          try(tolist(statement.Resource), [statement.Resource])
-        ) == 1
+        && try(statement.Resource, "") ==
+        aws_sns_topic.asgard_critical_alerts_topic.arn
       )
     ]) == 1
 
@@ -126,21 +101,17 @@ check "lambda_policy_allows_only_bedrock_model_invocation" {
   # Given the Lambda application IAM policy,
   # when Terraform evaluates the Bedrock permission statement,
   # then the statement must allow only bedrock:InvokeModel.
+
   assert {
     condition = length([
       for statement in local.asgard_lambda_app_policy.Statement : statement
       if(
-        statement.Effect == "Allow"
+        try(statement.Sid, "") == "InvokeBedrockModel"
+        && statement.Effect == "Allow"
         && toset(try(tolist(statement.Action), [statement.Action])) == toset([
           "bedrock:InvokeModel"
         ])
-        && contains(
-          try(tolist(statement.Resource), [statement.Resource]),
-          "*"
-        )
-        && length(
-          try(tolist(statement.Resource), [statement.Resource])
-        ) == 1
+        && try(statement.Resource, "") == "*"
       )
     ]) == 1
 
@@ -154,17 +125,64 @@ check "lambda_app_policy_allows_filter_log_events" {
   # then the Lambda role must be allowed to filter log events.
 
   assert {
-    condition = (
-      length([
-        for statement in jsondecode(
-          aws_iam_policy.asgard_lambda_app_policy.policy
-        ).Statement : statement
-        if statement.Effect == "Allow"
-        && toset(statement.Action) == toset(["logs:FilterLogEvents"])
-        && statement.Resource == "*"
-      ]) == 1
-    )
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "FilterCloudWatchLogs"
+        && statement.Effect == "Allow"
+        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+          "logs:FilterLogEvents"
+        ])
+        && try(statement.Resource, "") == "*"
+      )
+    ]) == 1
 
     error_message = "The Asgard Lambda application policy must allow logs:FilterLogEvents on all CloudWatch Logs resources."
+  }
+}
+
+check "lambda_policy_allows_eventbridge_put_events" {
+  # Given the Lambda application IAM policy,
+  # when Terraform evaluates the EventBridge permission statement,
+  # then the Lambda role must be allowed to submit events to the default event bus.
+
+  assert {
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "PublishSecurityEvents"
+        && statement.Effect == "Allow"
+        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+          "events:PutEvents"
+        ])
+        && try(statement.Resource, "") ==
+        data.aws_cloudwatch_event_bus.default.arn
+      )
+    ]) == 1
+
+    error_message = "The Lambda IAM policy must allow events:PutEvents only on the default EventBridge bus."
+  }
+}
+
+check "lambda_policy_limits_report_uploads_to_expected_prefix" {
+  # Given the executive report S3 bucket exists,
+  # when Terraform evaluates the S3 permission statement,
+  # then Lambda may upload objects only under the executive-reports prefix.
+
+  assert {
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "UploadExecutiveReports"
+        && statement.Effect == "Allow"
+        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+          "s3:PutObject"
+        ])
+        && try(statement.Resource, "") ==
+        "${aws_s3_bucket.asgard_executive_report.arn}/executive-reports/*"
+      )
+    ]) == 1
+
+    error_message = "The Lambda IAM policy must allow only s3:PutObject under the executive-reports prefix."
   }
 }
