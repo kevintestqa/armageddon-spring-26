@@ -1,14 +1,20 @@
 resource "aws_iam_role" "asgard_lambda_role" {
   name = "asgard_lambda_role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "lambda.amazonaws.com"
+
+    Statement = [
+      {
+        Sid    = "AllowLambdaAssumeRole"
+        Effect = "Allow"
+        Action = "sts:AssumeRole"
+
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
       }
-    }]
+    ]
   })
 }
 
@@ -26,63 +32,88 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 
 resource "aws_iam_policy" "asgard_lambda_app_policy" {
   name        = "asgard_lambda_app_policy"
-  description = "Allows Lambda to filter logs, invoke Bedrock, and write WAF events to DynamoDB."
+  description = "Allows Asgard Lambda functions to process security data, invoke Bedrock, publish alerts, emit events, and upload executive reports."
 
   policy = jsonencode({
     Version = "2012-10-17"
+
     Statement = [
       {
+        Sid    = "ManageCorrelationFindings"
         Effect = "Allow"
+
         Action = [
           "dynamodb:GetItem",
           "dynamodb:UpdateItem",
-          "dynamodb:PutItem"
+          "dynamodb:PutItem",
+          "dynamodb:Scan"
         ]
+
         Resource = aws_dynamodb_table.asgard_waf_correlation_findings.arn
       },
       {
+        Sid    = "WriteAndScanSecurityData"
         Effect = "Allow"
+
         Action = [
           "dynamodb:PutItem",
           "dynamodb:Scan"
         ]
-        Resource = aws_dynamodb_table.asgard_security_incidents.arn
+
+        Resource = [
+          aws_dynamodb_table.asgard_security_incidents.arn,
+          aws_dynamodb_table.asgard_waf_events.arn
+        ]
       },
       {
+        Sid    = "PublishCriticalAlerts"
         Effect = "Allow"
+
         Action = [
           "sns:Publish"
         ]
+
         Resource = aws_sns_topic.asgard_critical_alerts_topic.arn
       },
       {
+        Sid    = "InvokeBedrockModel"
         Effect = "Allow"
+
         Action = [
           "bedrock:InvokeModel"
         ]
+
         Resource = "*"
       },
       {
+        Sid    = "FilterCloudWatchLogs"
         Effect = "Allow"
+
         Action = [
           "logs:FilterLogEvents"
         ]
+
         Resource = "*"
       },
       {
+        Sid    = "PublishSecurityEvents"
         Effect = "Allow"
+
         Action = [
           "events:PutEvents"
         ]
+
         Resource = "*"
       },
       {
+        Sid    = "UploadExecutiveReports"
         Effect = "Allow"
+
         Action = [
-          "dynamodb:Scan",
-          "dynamodb:PutItem"
+          "s3:PutObject"
         ]
-        Resource = aws_dynamodb_table.asgard_waf_events.arn
+
+        Resource = "${aws_s3_bucket.asgard_executive_report.arn}/executive-reports/*"
       }
     ]
   })
@@ -95,15 +126,25 @@ resource "aws_iam_role_policy_attachment" "asgard_lambda_app_policy_attach" {
 
 data "aws_iam_policy_document" "asgard_waf_log_policy" {
   version = "2012-10-17"
+
   statement {
+    sid    = "AllowWAFLogDelivery"
     effect = "Allow"
+
     principals {
       identifiers = ["delivery.logs.amazonaws.com"]
       type        = "Service"
     }
 
-    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-    resources = ["${aws_cloudwatch_log_group.asgard_logs.arn}:*"]
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+
+    resources = [
+      "${aws_cloudwatch_log_group.asgard_waf_logs.arn}:*"
+    ]
+
     condition {
       test     = "ArnLike"
       values   = ["${aws_wafv2_web_acl.asgard_waf_v2.arn}:*"]

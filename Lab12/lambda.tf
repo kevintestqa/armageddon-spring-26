@@ -104,3 +104,46 @@ resource "aws_lambda_function" "python_auth" {
     }
   }
 }
+
+//Executive Dashboard Agent
+
+data "archive_file" "executive_dashboard_agent" {
+  type        = "zip"
+  source_dir  = "${path.module}/Lambda_Src/executive_dashboard_package"
+  output_path = "${path.module}/Lambda_Src/executive_dashboard_agent.zip"
+}
+
+resource "aws_lambda_function" "executive_dashboard_agent" {
+  filename      = data.archive_file.executive_dashboard_agent.output_path
+  function_name = "executive_dashboard_agent"
+  role          = aws_iam_role.asgard_lambda_role.arn
+  handler       = "executive_dashboard_agent.lambda_handler"
+  code_sha256   = data.archive_file.executive_dashboard_agent.output_base64sha256
+
+  runtime     = "python3.14"
+  timeout     = 120
+  memory_size = 512
+  ephemeral_storage {
+    size = 512
+  }
+
+  environment {
+    variables = {
+      WAF_EVENTS_TABLE           = aws_dynamodb_table.asgard_waf_events.name
+      CORRELATION_FINDINGS_TABLE = aws_dynamodb_table.asgard_waf_correlation_findings.name
+      SECURITY_INCIDENTS_TABLE   = aws_dynamodb_table.asgard_security_incidents.name
+
+      REPORT_BUCKET = aws_s3_bucket.asgard_executive_report.bucket
+      REPORT_PREFIX = "executive-reports"
+
+      BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
+      ENABLE_BEDROCK   = "true"
+
+      REPORT_PERIOD_HOURS = "24"
+      MAX_ITEMS_PER_TABLE = "5000"
+
+      ORGANIZATION_NAME = "Asgard Cloud Security"
+      REPORT_TITLE      = "Executive Security Report"
+    }
+  }
+}
