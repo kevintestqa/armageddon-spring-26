@@ -109,7 +109,7 @@ resource "aws_lambda_function" "python_auth" {
 
 data "archive_file" "executive_dashboard_agent" {
   type        = "zip"
-  source_dir  = "${path.module}/Lambda_Src/executive_dashboard_package"
+  source_dir  = "${path.module}/Lambda_Src/Reports/executive_dashboard_package"
   output_path = "${path.module}/Lambda_Src/executive_dashboard_agent.zip"
 }
 
@@ -151,8 +151,9 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
 
 data "archive_file" "compliance_agent" {
   type        = "zip"
-  source_dir  = "${path.module}/Lambda_Src/compliance_package"
+  source_dir  = "${path.module}/Lambda_Src/Reports/compliance_package"
   output_path = "${path.module}/Lambda_Src/compliance_agent.zip"
+  
 }
 
 resource "aws_lambda_function" "compliance_agent" {

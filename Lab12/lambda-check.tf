@@ -411,13 +411,13 @@ check "executive_dashboard_archive_uses_expected_source" {
       data.archive_file.executive_dashboard_agent.type == "zip"
       &&
       data.archive_file.executive_dashboard_agent.source_dir ==
-      "${path.module}/Lambda_Src/executive_dashboard_package"
+      "${path.module}/Lambda_Src/Reports/executive_dashboard_package"
       &&
       data.archive_file.executive_dashboard_agent.output_path ==
       "${path.module}/Lambda_Src/executive_dashboard_agent.zip"
     )
 
-    error_message = "The Executive Dashboard archive must package the expected directory into the expected ZIP file."
+    error_message = "The Executive Dashboard archive must package Lambda_Src/Reports/executive_dashboard_package into Lambda_Src/executive_dashboard_agent.zip."
   }
 }
 
@@ -561,5 +561,98 @@ check "executive_dashboard_lambda_environment_references_expected_resources" {
     )
 
     error_message = "The Executive Dashboard Lambda environment variables must reference the expected resources and approved values."
+  }
+}
+
+###############################################################################
+# Compliance Agent Checks
+###############################################################################
+
+check "compliance_agent_archive_uses_expected_source" {
+  # Given the Compliance Agent Lambda package,
+  # when Terraform evaluates the archive configuration,
+  # then it must package the compliance directory into the expected ZIP file.
+
+  assert {
+    condition = (
+      data.archive_file.compliance_agent.type == "zip"
+      &&
+      data.archive_file.compliance_agent.source_dir ==
+      "${path.module}/Lambda_Src/Reports/compliance_package"
+      &&
+      data.archive_file.compliance_agent.output_path ==
+      "${path.module}/Lambda_Src/compliance_agent.zip"
+    )
+
+    error_message = "The Compliance Agent archive must package Lambda_Src/Reports/compliance_package into Lambda_Src/compliance_agent.zip."
+  }
+}
+
+check "compliance_agent_lambda_uses_expected_package" {
+  # Given the Compliance Agent deployment package,
+  # when Terraform evaluates the Lambda deployment package,
+  # then it must use the generated ZIP archive and matching source hash.
+
+  assert {
+    condition = (
+      aws_lambda_function.compliance_agent.filename ==
+      data.archive_file.compliance_agent.output_path
+      &&
+      aws_lambda_function.compliance_agent.code_sha256 ==
+      data.archive_file.compliance_agent.output_base64sha256
+    )
+
+    error_message = "The Compliance Agent Lambda must use the generated compliance deployment package and matching source hash."
+  }
+}
+
+check "compliance_agent_lambda_uses_expected_execution_role" {
+  # Given the Compliance Agent Lambda,
+  # when Terraform evaluates its execution role,
+  # then it must use the Asgard Lambda IAM role.
+
+  assert {
+    condition = (
+      aws_lambda_function.compliance_agent.role ==
+      aws_iam_role.asgard_lambda_role.arn
+    )
+
+    error_message = "The Compliance Agent Lambda must use the Asgard Lambda execution role."
+  }
+}
+
+check "compliance_agent_lambda_uses_expected_runtime_and_handler" {
+  # Given the Compliance Agent Python source file,
+  # when Terraform evaluates the runtime and handler,
+  # then it must use Python 3.14 and compliance.lambda_handler.
+
+  assert {
+    condition = (
+      aws_lambda_function.compliance_agent.runtime == "python3.14"
+      &&
+      aws_lambda_function.compliance_agent.handler ==
+      "compliance.lambda_handler"
+    )
+
+    error_message = "The Compliance Agent Lambda must use runtime python3.14 and handler compliance.lambda_handler."
+  }
+}
+
+check "compliance_agent_lambda_uses_expected_compute_settings" {
+  # Given the Compliance Agent workload,
+  # when Terraform evaluates its compute configuration,
+  # then it must use the approved timeout, memory, and architecture.
+
+  assert {
+    condition = (
+      aws_lambda_function.compliance_agent.timeout == 180
+      &&
+      aws_lambda_function.compliance_agent.memory_size == 512
+      &&
+      toset(aws_lambda_function.compliance_agent.architectures) ==
+      toset(["x86_64"])
+    )
+
+    error_message = "The Compliance Agent Lambda must use a 180 second timeout, 512 MB memory, and x86_64 architecture."
   }
 }
