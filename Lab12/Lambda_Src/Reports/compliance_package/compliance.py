@@ -112,6 +112,7 @@ CONTROLS_FILE = os.environ.get(
 )
 
 COMPLIANCE_EVIDENCE_TABLE = os.environ["COMPLIANCE_EVIDENCE_TABLE"]
+COMPLIANCE_FINDINGS_TABLE = os.environ["COMPLIANCE_FINDINGS_TABLE"] #AI
 REPORT_BUCKET = os.environ["REPORT_BUCKET"]
 
 REPORT_PREFIX = os.environ.get(
@@ -945,6 +946,73 @@ def write_evidence_records(
 
     return written
 
+#AI
+# ============================================================================
+# Compliance findings storage
+# ============================================================================
+
+def write_finding_records(
+    results: list[dict[str, Any]],
+    report_id: str,
+) -> int:
+    """
+    Store one open finding for each control that failed or requires review.
+
+    PASS results remain in the evidence table only. FAIL and REVIEW results
+    require remediation or human validation, so they are also written to the
+    compliance findings table.
+    """
+
+    table = dynamodb_resource.Table(
+        COMPLIANCE_FINDINGS_TABLE
+    )
+
+    written = 0
+    finding_statuses = {"FAIL", "REVIEW"}
+
+    with table.batch_writer() as batch:
+        for result in results:
+            control_status = str(result["status"]).upper()
+
+            if control_status not in finding_statuses:
+                continue
+
+            finding_id = (
+                f"{report_id}#{result['control_id']}"
+            )
+
+            item = {
+                "finding_id": finding_id,
+                "report_id": report_id,
+                "control_id": result["control_id"],
+                "title": result["title"],
+                "description": result["description"],
+                "status": "OPEN",
+                "compliance_status": control_status,
+                "severity": result["severity"],
+                "category": result["category"],
+                "service": result.get("service"),
+                "resource_type": result.get(
+                    "resource_type"
+                ),
+                "observation": result["observation"],
+                "frameworks": result["frameworks"],
+                "evidence": result["evidence"],
+                "human_review_required": (
+                    control_status == "REVIEW"
+                ),
+                "created_at": result["evaluated_at"],
+                "updated_at": result["evaluated_at"],
+            }
+
+            if result.get("error"):
+                item["error"] = result["error"]
+
+            batch.put_item(Item=item)
+            written += 1
+
+    return written
+#AI
 
 # ============================================================================
 # Compliance scoring
@@ -1826,6 +1894,18 @@ def lambda_handler(
             f"Wrote {evidence_records_written} evidence "
             f"record(s) to DynamoDB."
         )
+        
+        #AI
+        findings_records_written = write_finding_records(
+            results=results,
+            report_id=report_id,
+        )
+
+        print(
+            f"Wrote {findings_records_written} compliance "
+            f"record(s) to DynamoDB."
+        )
+        #AI
 
         # Stage 4: Bedrock explains the results. It does not decide them.
         bedrock_used = False
@@ -1891,6 +1971,7 @@ def lambda_handler(
             "score_percent": summary["score_percent"],
             "controls_evaluated": summary["total_controls"],
             "evidence_records_written": evidence_records_written,
+            "findings_records_written": findings_records_written, #AI
             "bedrock_used": bedrock_used,
             "artifacts": artifacts,
             "certification_claimed": False,

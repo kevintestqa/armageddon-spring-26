@@ -175,6 +175,7 @@ resource "aws_lambda_function" "compliance_agent" {
     variables = {
       CONTROLS_FILE             = "/var/task/controls.json"
       COMPLIANCE_EVIDENCE_TABLE = aws_dynamodb_table.asgard_compliance_evidence.name
+      COMPLIANCE_FINDINGS_TABLE = aws_dynamodb_table.asgard_compliance_findings.name
 
       REPORT_BUCKET = aws_s3_bucket.asgard_compliance_report.bucket
       REPORT_PREFIX = "compliance-reports"
