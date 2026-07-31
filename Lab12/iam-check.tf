@@ -186,3 +186,52 @@ check "lambda_policy_limits_report_uploads_to_expected_prefix" {
     error_message = "The Lambda IAM policy must allow only s3:PutObject under the executive-reports prefix."
   }
 }
+
+check "lambda_policy_uses_expected_compliance_dynamodb_permissions" {
+  # Given the Lambda application IAM policy,
+  # when Terraform evaluates the compliance DynamoDB permission statement,
+  # then Lambda may write compliance records only to the evidence and findings tables.
+
+  assert {
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "WriteComplianceRecords"
+        && statement.Effect == "Allow"
+        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+          "dynamodb:PutItem",
+          "dynamodb:BatchWriteItem"
+        ])
+        && toset(try(tolist(statement.Resource), [statement.Resource])) == toset([
+          aws_dynamodb_table.asgard_compliance_evidence.arn,
+          aws_dynamodb_table.asgard_compliance_findings.arn
+        ])
+      )
+    ]) == 1
+
+    error_message = "The Lambda IAM policy must allow only PutItem and BatchWriteItem on the compliance evidence and findings tables."
+  }
+}
+
+check "lambda_policy_limits_compliance_report_uploads_to_expected_prefix" {
+  # Given the compliance report S3 bucket exists,
+  # when Terraform evaluates the compliance report upload statement,
+  # then Lambda may upload objects only under the compliance-reports prefix.
+
+  assert {
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "UploadComplianceReports"
+        && statement.Effect == "Allow"
+        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+          "s3:PutObject"
+        ])
+        && try(statement.Resource, "") ==
+        "${aws_s3_bucket.asgard_compliance_report.arn}/compliance-reports/*"
+      )
+    ]) == 1
+
+    error_message = "The Lambda IAM policy must allow only s3:PutObject under the compliance-reports prefix."
+  }
+}

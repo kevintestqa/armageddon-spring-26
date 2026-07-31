@@ -114,6 +114,30 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
         ]
 
         Resource = "${aws_s3_bucket.asgard_executive_report.arn}/executive-reports/*"
+      },
+      {
+        Sid    = "WriteComplianceRecords"
+        Effect = "Allow"
+
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:BatchWriteItem" //The compliance.py uses batch_writer() to write multiple items to the compliance evidence and findings tables in a single request.
+        ]
+
+        Resource = [
+          aws_dynamodb_table.asgard_compliance_evidence.arn,
+          aws_dynamodb_table.asgard_compliance_findings.arn
+        ]
+      },
+      {
+        Sid    = "UploadComplianceReports"
+        Effect = "Allow"
+
+        Action = [
+          "s3:PutObject"
+        ]
+
+        Resource = "${aws_s3_bucket.asgard_compliance_report.arn}/compliance-reports/*"
       }
     ]
   })

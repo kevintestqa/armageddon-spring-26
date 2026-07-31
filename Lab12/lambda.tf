@@ -120,10 +120,10 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
   handler       = "executive_dashboard_agent.lambda_handler"
   code_sha256   = data.archive_file.executive_dashboard_agent.output_base64sha256
 
-  runtime     = "python3.14"
+  runtime       = "python3.14"
   architectures = ["x86_64"] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
-  timeout     = 120
-  memory_size = 512
+  timeout       = 120
+  memory_size   = 512
   ephemeral_storage {
     size = 512
   }
@@ -145,6 +145,47 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
 
       ORGANIZATION_NAME = "Asgard Cloud Security"
       REPORT_TITLE      = "Executive Security Report"
+    }
+  }
+}
+
+data "archive_file" "compliance_agent" {
+  type        = "zip"
+  source_dir  = "${path.module}/Lambda_Src/compliance_package"
+  output_path = "${path.module}/Lambda_Src/compliance_agent.zip"
+}
+
+resource "aws_lambda_function" "compliance_agent" {
+  filename      = data.archive_file.compliance_agent.output_path
+  function_name = "compliance_agent"
+  role          = aws_iam_role.asgard_lambda_role.arn
+  handler       = "compliance.lambda_handler"
+  code_sha256   = data.archive_file.compliance_agent.output_base64sha256
+
+  runtime       = "python3.14"
+  architectures = ["x86_64"] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
+  timeout       = 180
+  memory_size   = 512
+  ephemeral_storage {
+    size = 512
+  }
+
+  environment {
+    variables = {
+      CONTROLS_FILE             = "/var/task/controls.json"
+      COMPLIANCE_EVIDENCE_TABLE = aws_dynamodb_table.asgard_compliance_evidence.name
+
+      REPORT_BUCKET = aws_s3_bucket.asgard_compliance_report.bucket
+      REPORT_PREFIX = "compliance-reports"
+
+      COMPLIANCE_FRAMEWORKS = "NIST CSF 2.0"
+
+      BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
+      ENABLE_BEDROCK   = "true"
+
+      ORGANIZATION_NAME  = "Asgard Cloud Security"
+      REPORT_TITLE       = "Compliance Evidence Report"
+      UNEVALUATED_STATUS = "REVIEW"
     }
   }
 }

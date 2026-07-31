@@ -93,3 +93,33 @@ resource "aws_dynamodb_table" "asgard_waf_events" {
     Component = "waf"
   }
 }
+
+resource "aws_dynamodb_table" "asgard_compliance_findings" {
+  name         = "compliance-findings"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "finding_id"
+
+  attribute {
+    name = "finding_id"
+    type = "S"
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+}
+
+resource "aws_dynamodb_table" "asgard_compliance_evidence" {
+  name         = "compliance-evidence"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "evidence_id"
+
+  attribute {
+    name = "evidence_id"
+    type = "S"
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+}
