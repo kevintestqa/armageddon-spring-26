@@ -109,7 +109,7 @@ resource "aws_lambda_function" "python_auth" {
 
 data "archive_file" "executive_dashboard_agent" {
   type        = "zip"
-  source_dir  = "${path.module}/Lambda_Src/executive_dashboard_package"
+  source_dir  = "${path.module}/Lambda_Src/Reports/executive_dashboard_package"
   output_path = "${path.module}/Lambda_Src/executive_dashboard_agent.zip"
 }
 
@@ -151,8 +151,9 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
 
 data "archive_file" "compliance_agent" {
   type        = "zip"
-  source_dir  = "${path.module}/Lambda_Src/compliance_package"
+  source_dir  = "${path.module}/Lambda_Src/Reports/compliance_package"
   output_path = "${path.module}/Lambda_Src/compliance_agent.zip"
+  
 }
 
 resource "aws_lambda_function" "compliance_agent" {
@@ -174,6 +175,7 @@ resource "aws_lambda_function" "compliance_agent" {
     variables = {
       CONTROLS_FILE             = "/var/task/controls.json"
       COMPLIANCE_EVIDENCE_TABLE = aws_dynamodb_table.asgard_compliance_evidence.name
+      COMPLIANCE_FINDINGS_TABLE = aws_dynamodb_table.asgard_compliance_findings.name
 
       REPORT_BUCKET = aws_s3_bucket.asgard_compliance_report.bucket
       REPORT_PREFIX = "compliance-reports"
