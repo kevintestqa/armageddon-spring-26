@@ -1,0 +1,57 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Snyk Security
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  snyk:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    runs-on: ubuntu-latest
+
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Snyk CLI to check for security issues
+        uses: snyk/actions/setup@806182742461562b67788a64410098c9d9b96adb
+
+      - name: Snyk Code test
+        run: snyk code test --sarif > snyk-code.sarif || true
+
+      # Disabled because no supported dependency manifest
+      # exists at the repository root.
+      # - name: Snyk Open Source monitor
+      #   run: snyk monitor --all-projects
+
+      - name: Snyk IaC test and report
+        run: snyk iac test --report
+
+      # Docker and container scanning are disabled because
+      # this repository does not contain a Dockerfile.
+      # - name: Build a Docker image
+      #   run: docker build -t your/image-to-test .
+
+      # - name: Snyk Container monitor
+      #   run: snyk container monitor your/image-to-test --file=Dockerfile
+
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-code.sarif
