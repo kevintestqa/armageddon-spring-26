@@ -1,6 +1,5 @@
 output "api_gateway_invoke_url" {
   description = "Invoke URL for the API Gateway REST API"
-
   value = "https://${aws_api_gateway_rest_api.asgard_api_rest.id}.execute-api.${data.aws_region.current.region}.amazonaws.com/${aws_api_gateway_stage.qa_environment.stage_name}"
 }
 
@@ -36,4 +35,12 @@ output "event_bus_name" {
 
 output "web_acl_name" {
   value = aws_wafv2_web_acl.asgard_waf_v2.name
+}
+
+output "critical_alerts_topic_endpoint" {
+  value = aws_sns_topic_subscription.asgard_critical_alerts_sub.endpoint
+}
+
+output "medium_high_alerts_topic_endpoint" {
+  value = aws_sns_topic_subscription.asgard_medium_high_alerts_sub.endpoint
 }
