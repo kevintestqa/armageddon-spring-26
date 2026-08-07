@@ -32,7 +32,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 
 resource "aws_iam_policy" "asgard_lambda_app_policy" {
   name        = "asgard_lambda_app_policy"
-  description = "Allows Asgard Lambda functions to process security data, invoke Bedrock, publish alerts, emit events, and upload executive reports."
+  description = "Allows Asgard Lambda functions to process security data, invoke Bedrock, publish alerts, emit events, and generate security and compliance reports."
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -121,12 +121,26 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
 
         Action = [
           "dynamodb:PutItem",
-          "dynamodb:BatchWriteItem" //The compliance.py uses batch_writer() to write multiple items to the compliance evidence and findings tables in a single request.
+          "dynamodb:BatchWriteItem"
         ]
 
         Resource = [
           aws_dynamodb_table.asgard_compliance_evidence.arn,
           aws_dynamodb_table.asgard_compliance_findings.arn
+        ]
+      },
+      {
+        Sid    = "DescribeComplianceDataSources"
+        Effect = "Allow"
+
+        Action = [
+          "dynamodb:DescribeTable"
+        ]
+
+        Resource = [
+          aws_dynamodb_table.asgard_waf_events.arn,
+          aws_dynamodb_table.asgard_waf_correlation_findings.arn,
+          aws_dynamodb_table.asgard_security_incidents.arn
         ]
       },
       {
@@ -138,6 +152,19 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
         ]
 
         Resource = "${aws_s3_bucket.asgard_compliance_report.arn}/compliance-reports/*"
+      },
+      {
+        Sid    = "ListReportBuckets"
+        Effect = "Allow"
+
+        Action = [
+          "s3:ListBucket"
+        ]
+
+        Resource = [
+          aws_s3_bucket.asgard_compliance_report.arn,
+          aws_s3_bucket.asgard_executive_report.arn
+        ]
       }
     ]
   })

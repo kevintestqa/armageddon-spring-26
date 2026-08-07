@@ -1,6 +1,6 @@
 output "api_gateway_invoke_url" {
   description = "Invoke URL for the API Gateway REST API"
-  value = "https://${aws_api_gateway_rest_api.asgard_api_rest.id}.execute-api.${data.aws_region.current.region}.amazonaws.com/${aws_api_gateway_stage.qa_environment.stage_name}"
+  value       = "https://${aws_api_gateway_rest_api.asgard_api_rest.id}.execute-api.${data.aws_region.current.region}.amazonaws.com/${aws_api_gateway_stage.qa_environment.stage_name}"
 }
 
 output "response_agent_lambda" {

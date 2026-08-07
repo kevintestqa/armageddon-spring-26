@@ -50,7 +50,7 @@
 
         "type": "table_exists",
 
-        "table": "waf-events"
+        "table": "asgard-waf-events" 
 
       },
 
