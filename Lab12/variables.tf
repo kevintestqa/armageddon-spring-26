@@ -40,3 +40,24 @@ variable "thor_password" {
   default     = "Mjolnir1234!"
   sensitive   = true
 }
+
+variable "lambda_architecture" {
+  type    = string
+  default = "x86_64"
+
+  validation {
+    condition = var.lambda_architecture == "x86_64"
+    error_message = "Architecture must be x86_64"
+  }
+}
+
+variable "lambda_python_runtime" {
+  type    = string
+  default = "python3.14"
+
+  validation {
+    condition = var.lambda_python_runtime == "python3.14"
+    error_message = "Runtime must be python3.14"
+  }
+}
+
