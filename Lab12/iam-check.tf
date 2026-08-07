@@ -235,3 +235,64 @@ check "lambda_policy_limits_compliance_report_uploads_to_expected_prefix" {
     error_message = "The Lambda IAM policy must allow only s3:PutObject under the compliance-reports prefix."
   }
 }
+
+check "lambda_policy_allows_listing_report_buckets" {
+  # Given the compliance agent evaluates report artifacts,
+  # when Terraform evaluates the S3 bucket-listing permission,
+  # then Lambda may list only the compliance and executive report buckets.
+
+  assert {
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "ListReportBuckets"
+        && statement.Effect == "Allow"
+        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+          "s3:ListBucket"
+        ])
+        && toset(try(tolist(statement.Resource), [statement.Resource])) == toset([
+          aws_s3_bucket.asgard_compliance_report.arn,
+          aws_s3_bucket.asgard_executive_report.arn
+        ])
+      )
+    ]) == 1
+
+    error_message = "The Lambda IAM policy must allow s3:ListBucket only on the compliance and executive report buckets."
+  }
+}
+
+check "lambda_policy_allows_describing_compliance_data_sources" {
+  # Given the compliance agent evaluates DynamoDB-backed controls,
+  # when Terraform evaluates the table-description permission,
+  # then Lambda may describe only the three security data source tables.
+
+  assert {
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "DescribeComplianceDataSources"
+        && statement.Effect == "Allow"
+        && toset(
+          try(
+            tolist(statement.Action),
+            [statement.Action]
+          )
+        ) == toset([
+          "dynamodb:DescribeTable"
+        ])
+        && toset(
+          try(
+            tolist(statement.Resource),
+            [statement.Resource]
+          )
+        ) == toset([
+          aws_dynamodb_table.asgard_waf_events.arn,
+          aws_dynamodb_table.asgard_waf_correlation_findings.arn,
+          aws_dynamodb_table.asgard_security_incidents.arn
+        ])
+      )
+    ]) == 1
+
+    error_message = "The Lambda IAM policy must allow dynamodb:DescribeTable only on the WAF events, correlation findings, and security incidents tables."
+  }
+}
