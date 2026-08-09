@@ -25,7 +25,7 @@ resource "aws_lambda_function" "asgard_lambda_function" {
       ENABLE_BEDROCK   = "true"
     }
   }
-    lifecycle {
+  lifecycle {
     precondition {
       condition     = var.lambda_python_runtime == "python3.14"
       error_message = "Runtime must be python3.14"
@@ -52,7 +52,7 @@ resource "aws_lambda_function" "waf_bedrock_analyzer" {
       BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
     }
   }
-      lifecycle {
+  lifecycle {
     precondition {
       condition     = var.lambda_python_runtime == "python3.14"
       error_message = "Runtime must be python3.14"
@@ -116,7 +116,7 @@ resource "aws_lambda_function" "python_auth" {
     }
   }
 
-      lifecycle {
+  lifecycle {
     precondition {
       condition     = var.lambda_python_runtime == "python3.14"
       error_message = "Runtime must be python3.14"
@@ -142,9 +142,9 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
   runtime       = var.lambda_python_runtime
   architectures = [var.lambda_architecture] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
   timeout       = 120
-  memory_size   = 512
+  memory_size   = var.lambda_memory_size
   ephemeral_storage {
-    size = 512
+    size = var.lambda_memory_size
   }
 
   environment {
@@ -197,9 +197,9 @@ resource "aws_lambda_function" "compliance_agent" {
   runtime       = var.lambda_python_runtime
   architectures = [var.lambda_architecture] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
   timeout       = 180
-  memory_size   = 512
+  memory_size   = var.lambda_memory_size
   ephemeral_storage {
-    size = 512
+    size = var.lambda_memory_size
   }
 
   environment {

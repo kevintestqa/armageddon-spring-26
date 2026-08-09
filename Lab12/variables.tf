@@ -46,7 +46,7 @@ variable "lambda_architecture" {
   default = "x86_64"
 
   validation {
-    condition = var.lambda_architecture == "x86_64"
+    condition     = var.lambda_architecture == "x86_64"
     error_message = "Architecture must be x86_64"
   }
 }
@@ -56,8 +56,38 @@ variable "lambda_python_runtime" {
   default = "python3.14"
 
   validation {
-    condition = var.lambda_python_runtime == "python3.14"
+    condition     = var.lambda_python_runtime == "python3.14"
     error_message = "Runtime must be python3.14"
   }
 }
 
+//validations define the rule
+variable "lambda_memory_size" {
+  type    = number
+  default = 512
+
+  validation {
+    condition     = var.lambda_memory_size >= 128 && var.lambda_memory_size <= 10240
+    error_message = "Memory size must be between 128 MB and 10,240 MB"
+  }
+}
+
+variable "executive_report_bucket_name" {
+  type    = string
+  default = "asgard-executive-report"
+
+  validation {
+    condition     = var.executive_report_bucket_name == "asgard-executive-report"
+    error_message = "Executive report bucket name must be 'asgard-executive-report'"
+  }
+}
+
+variable "compliance_report_bucket_name" {
+  type    = string
+  default = "asgard-compliance-report"
+
+  validation {
+    condition     = var.compliance_report_bucket_name == "asgard-compliance-report"
+    error_message = "Compliance report bucket name must be 'asgard-compliance-report'"
+  }
+}

@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "asgard_executive_report" {
-  bucket        = "asgard-executive-report"
+  bucket        = var.executive_report_bucket_name
   force_destroy = true
 
   tags = {
@@ -15,7 +15,7 @@ resource "aws_s3_bucket_versioning" "asgard_executive_report_versioning" {
 }
 
 resource "aws_s3_bucket" "asgard_compliance_report" {
-  bucket        = "asgard-compliance-report"
+  bucket        = var.compliance_report_bucket_name
   force_destroy = true
 
   tags = {
