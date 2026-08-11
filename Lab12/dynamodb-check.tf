@@ -3,9 +3,9 @@
 ###############################################################################
 
 check "waf_correlation_table_uses_expected_name" {
-  # Given the WAF correlation findings table,
-  # when Terraform evaluates the table name,
-  # then it must use the approved waf-correlation-findings name.
+  # Given the WAF correlation findings table is configured,
+  # when the table name is checked,
+  # then the name should be waf-correlation-findings.
 
   assert {
     condition = (
@@ -18,9 +18,9 @@ check "waf_correlation_table_uses_expected_name" {
 }
 
 check "waf_correlation_table_uses_expected_partition_key" {
-  # Given the WAF correlation findings table,
-  # when Terraform evaluates the partition key,
-  # then it must use finding_id as a string attribute.
+  # Given the WAF correlation findings table is configured with a partition key,
+  # when the partition key is checked,
+  # then finding_id should be configured as a string partition key.
 
   assert {
     condition = (
@@ -38,9 +38,9 @@ check "waf_correlation_table_uses_expected_partition_key" {
 }
 
 check "waf_correlation_table_uses_on_demand_billing" {
-  # Given the WAF correlation findings workload,
-  # when Terraform evaluates the billing configuration,
-  # then the table must use on-demand capacity.
+  # Given the WAF correlation findings table is configured with a billing mode,
+  # when the billing mode is checked,
+  # then it should be set to PAY_PER_REQUEST.
 
   assert {
     condition = (
@@ -53,9 +53,9 @@ check "waf_correlation_table_uses_on_demand_billing" {
 }
 
 check "waf_correlation_table_uses_expected_ttl" {
-  # Given the WAF correlation findings retention requirement,
-  # when Terraform evaluates the TTL configuration,
-  # then TTL must be enabled using the TimeToExist attribute.
+  # Given the WAF correlation findings table is configured with TTL,
+  # when the TTL settings are checked,
+  # then TTL should be enabled using the TimeToExist attribute.
 
   assert {
     condition = (
@@ -74,9 +74,9 @@ check "waf_correlation_table_uses_expected_ttl" {
 }
 
 check "waf_correlation_table_uses_server_side_encryption" {
-  # Given the WAF correlation findings table,
-  # when Terraform evaluates data protection settings,
-  # then server-side encryption must be enabled.
+  # Given the WAF correlation findings table is configured with server-side encryption,
+  # when the encryption settings are checked,
+  # then server-side encryption should be enabled.
 
   assert {
     condition = (
@@ -92,9 +92,9 @@ check "waf_correlation_table_uses_server_side_encryption" {
 }
 
 check "security_incidents_table_uses_expected_name" {
-  # Given the security incidents table,
-  # when Terraform evaluates the table name,
-  # then it must use the approved security-incidents name.
+  # Given the security incidents table is configured,
+  # when the table name is checked,
+  # then the name should be security-incidents.
 
   assert {
     condition = (
@@ -107,9 +107,9 @@ check "security_incidents_table_uses_expected_name" {
 }
 
 check "security_incidents_table_uses_expected_partition_key" {
-  # Given the security incidents table,
-  # when Terraform evaluates the partition key,
-  # then it must use incident_id as a string attribute.
+  # Given the security incidents table is configured with a partition key,
+  # when the partition key is checked,
+  # then incident_id should be configured as a string partition key.
 
   assert {
     condition = (
@@ -127,9 +127,9 @@ check "security_incidents_table_uses_expected_partition_key" {
 }
 
 check "security_incidents_table_uses_on_demand_billing" {
-  # Given the security incidents workload,
-  # when Terraform evaluates the billing configuration,
-  # then the table must use on-demand capacity.
+  # Given the security incidents table is configured with a billing mode,
+  # when the billing mode is checked,
+  # then it should be set to PAY_PER_REQUEST.
 
   assert {
     condition = (
@@ -142,9 +142,9 @@ check "security_incidents_table_uses_on_demand_billing" {
 }
 
 check "security_incidents_table_uses_server_side_encryption" {
-  # Given the security incidents table,
-  # when Terraform evaluates data protection settings,
-  # then server-side encryption must be enabled.
+  # Given the security incidents table is configured with server-side encryption,
+  # when the encryption settings are checked,
+  # then server-side encryption should be enabled.
 
   assert {
     condition = (
@@ -164,9 +164,9 @@ check "security_incidents_table_uses_server_side_encryption" {
 ###############################################################################
 
 check "token_tracking_table_uses_expected_name" {
-  # Given the token tracking table,
-  # when Terraform evaluates the table name,
-  # then it must use the approved token-trackingv2 name.
+  # Given the token tracking table is configured,
+  # when the table name is checked,
+  # then the name should be token-trackingv2.
 
   assert {
     condition = (
@@ -179,9 +179,9 @@ check "token_tracking_table_uses_expected_name" {
 }
 
 check "token_tracking_table_uses_expected_partition_key" {
-  # Given the token tracking table,
-  # when Terraform evaluates the partition key,
-  # then it must use token_id as a string attribute.
+  # Given the token tracking table is configured with a partition key,
+  # when the partition key is checked,
+  # then token_id should be configured as a string partition key.
 
   assert {
     condition = (
@@ -199,9 +199,9 @@ check "token_tracking_table_uses_expected_partition_key" {
 }
 
 check "token_tracking_table_uses_on_demand_billing" {
-  # Given the token tracking workload,
-  # when Terraform evaluates the billing configuration,
-  # then the table must use on-demand capacity.
+  # Given the token tracking table is configured with a billing mode,
+  # when the billing mode is checked,
+  # then it should be set to PAY_PER_REQUEST.
 
   assert {
     condition = (
@@ -214,9 +214,9 @@ check "token_tracking_table_uses_on_demand_billing" {
 }
 
 check "token_tracking_table_uses_expected_ttl" {
-  # Given the token tracking retention requirement,
-  # when Terraform evaluates the TTL configuration,
-  # then TTL must be enabled using the TimeToExist attribute.
+  # Given the token tracking table is configured with TTL,
+  # when the TTL settings are checked,
+  # then TTL should be enabled using the TimeToExist attribute.
 
   assert {
     condition = (
@@ -235,9 +235,9 @@ check "token_tracking_table_uses_expected_ttl" {
 }
 
 check "token_tracking_table_uses_server_side_encryption" {
-  # Given the token tracking table,
-  # when Terraform evaluates the data protection settings,
-  # then server-side encryption must be enabled.
+  # Given the token tracking table is configured with server-side encryption,
+  # when the encryption settings are checked,
+  # then server-side encryption should be enabled.
 
   assert {
     condition = (
@@ -253,10 +253,9 @@ check "token_tracking_table_uses_server_side_encryption" {
 }
 
 check "token_tracking_table_uses_expected_global_secondary_index" {
-  # Given the token tracking table,
-  # when Terraform evaluates its global secondary indexes,
-  # then it must contain satellite-DB-Index with username as its HASH key
-  # and project all table attributes.
+  # Given the token tracking table is configured with a global secondary index,
+  # when the index configuration is checked,
+  # then satellite-DB-Index should use username as its HASH key and project all attributes.
 
   assert {
     condition = length([
@@ -279,9 +278,9 @@ check "token_tracking_table_uses_expected_global_secondary_index" {
 ###############################################################################
 
 check "compliance_findings_table_uses_expected_name" {
-  # Given the compliance findings table,
-  # when Terraform evaluates the table name,
-  # then it must use the approved compliance-findings name.
+  # Given the compliance findings table is configured,
+  # when the table name is checked,
+  # then the name should be compliance-findings.
 
   assert {
     condition = (
@@ -294,9 +293,9 @@ check "compliance_findings_table_uses_expected_name" {
 }
 
 check "compliance_findings_table_uses_expected_partition_key" {
-  # Given the compliance findings table,
-  # when Terraform evaluates the partition key,
-  # then it must use finding_id as a string attribute.
+  # Given the compliance findings table is configured with a partition key,
+  # when the partition key is checked,
+  # then finding_id should be configured as a string partition key.
 
   assert {
     condition = (
@@ -314,9 +313,9 @@ check "compliance_findings_table_uses_expected_partition_key" {
 }
 
 check "compliance_findings_table_uses_on_demand_billing" {
-  # Given the compliance findings workload,
-  # when Terraform evaluates the billing configuration,
-  # then the table must use on-demand capacity.
+  # Given the compliance findings table is configured with a billing mode,
+  # when the billing mode is checked,
+  # then it should be set to PAY_PER_REQUEST.
 
   assert {
     condition = (
@@ -329,9 +328,9 @@ check "compliance_findings_table_uses_on_demand_billing" {
 }
 
 check "compliance_findings_table_uses_server_side_encryption" {
-  # Given the compliance findings table,
-  # when Terraform evaluates data protection settings,
-  # then server-side encryption must be enabled.
+  # Given the compliance findings table is configured with server-side encryption,
+  # when the encryption settings are checked,
+  # then server-side encryption should be enabled.
 
   assert {
     condition = (
@@ -351,9 +350,9 @@ check "compliance_findings_table_uses_server_side_encryption" {
 ###############################################################################
 
 check "compliance_evidence_table_uses_expected_name" {
-  # Given the compliance evidence table,
-  # when Terraform evaluates the table name,
-  # then it must use the approved compliance-evidence name.
+  # Given the compliance evidence table is configured,
+  # when the table name is checked,
+  # then the name should be compliance-evidence.
 
   assert {
     condition = (
@@ -366,9 +365,9 @@ check "compliance_evidence_table_uses_expected_name" {
 }
 
 check "compliance_evidence_table_uses_expected_partition_key" {
-  # Given the compliance evidence table,
-  # when Terraform evaluates the partition key,
-  # then it must use evidence_id as a string attribute.
+  # Given the compliance evidence table is configured with a partition key,
+  # when the partition key is checked,
+  # then evidence_id should be configured as a string partition key.
 
   assert {
     condition = (
@@ -386,9 +385,9 @@ check "compliance_evidence_table_uses_expected_partition_key" {
 }
 
 check "compliance_evidence_table_uses_on_demand_billing" {
-  # Given the compliance evidence workload,
-  # when Terraform evaluates the billing configuration,
-  # then the table must use on-demand capacity.
+  # Given the compliance evidence table is configured with a billing mode,
+  # when the billing mode is checked,
+  # then it should be set to PAY_PER_REQUEST.
 
   assert {
     condition = (
@@ -401,9 +400,9 @@ check "compliance_evidence_table_uses_on_demand_billing" {
 }
 
 check "compliance_evidence_table_uses_server_side_encryption" {
-  # Given the compliance evidence table,
-  # when Terraform evaluates data protection settings,
-  # then server-side encryption must be enabled.
+  # Given the compliance evidence table is configured with server-side encryption,
+  # when the encryption settings are checked,
+  # then server-side encryption should be enabled.
 
   assert {
     condition = (

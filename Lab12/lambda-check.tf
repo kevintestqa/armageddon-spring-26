@@ -1,10 +1,9 @@
 ### Checks for Lambda function configuration
 
 check "lambda_uses_expected_deployment_package" {
-  # Given the Lambda deployment archive,
-  # when Terraform evaluates the function package and source hash,
-  # then the function must use the generated response agent archive
-  # and its hash must match the archive data source.
+  # Given the Asgard Lambda is configured with a deployment package,
+  # when the deployment package and source hash are checked,
+  # then the function should use the generated response agent archive and matching source hash.
 
   assert {
     condition = (
@@ -20,9 +19,9 @@ check "lambda_uses_expected_deployment_package" {
 }
 
 check "lambda_uses_expected_execution_role" {
-  # Given the Asgard Lambda execution role,
-  # when Terraform evaluates the function role assignment,
-  # then the function must use the Asgard Lambda role ARN.
+  # Given the Asgard Lambda is configured with an execution role,
+  # when the role assignment is checked,
+  # then the function should use the Asgard Lambda role.
 
   assert {
     condition = (
@@ -35,9 +34,9 @@ check "lambda_uses_expected_execution_role" {
 }
 
 check "lambda_uses_expected_runtime_and_handler" {
-  # Given the response agent Python source file,
-  # when Terraform evaluates the Lambda runtime and entry point,
-  # then the function must use Python 3.14 and response_agent.lambda_handler.
+  # Given the Asgard Lambda is configured with a runtime and handler,
+  # when the runtime configuration is checked,
+  # then it should use Python 3.14 and response_agent.lambda_handler.
 
   assert {
     condition = (
@@ -52,9 +51,9 @@ check "lambda_uses_expected_runtime_and_handler" {
 }
 
 check "lambda_environment_variables_reference_expected_resources" {
-  # Given the DynamoDB tables, WAF events table, SNS topic, and Bedrock configuration,
-  # when Terraform evaluates the Lambda environment variable values,
-  # then each variable must reference the intended resource or approved value.
+  # Given the Asgard Lambda is configured with environment variables,
+  # when the environment variable values are checked,
+  # then they should reference the expected tables, SNS topic, and Bedrock configuration.
 
   assert {
     condition = (
@@ -86,9 +85,9 @@ check "lambda_environment_variables_reference_expected_resources" {
 ###############################################################################
 
 check "waf_bedrock_archive_uses_expected_source" {
-  # Given the WAF Bedrock analyzer source code,
-  # when Terraform evaluates the archive configuration,
-  # then it must package the expected Python file into the expected ZIP file.
+  # Given the WAF Bedrock analyzer archive is configured,
+  # when the archive source and output are checked,
+  # then it should package waf_bedrock_analyzer.py into the expected ZIP file.
 
   assert {
     condition = (
@@ -106,9 +105,9 @@ check "waf_bedrock_archive_uses_expected_source" {
 }
 
 check "waf_bedrock_lambda_uses_expected_package" {
-  # Given the WAF Bedrock analyzer deployment package,
-  # when Terraform evaluates the Lambda package,
-  # then the function must use the generated ZIP archive and matching source hash.
+  # Given the WAF Bedrock analyzer Lambda is configured with a deployment package,
+  # when the deployment package and source hash are checked,
+  # then it should use the generated WAF Bedrock analyzer archive and matching source hash.
 
   assert {
     condition = (
@@ -124,9 +123,9 @@ check "waf_bedrock_lambda_uses_expected_package" {
 }
 
 check "waf_bedrock_lambda_uses_expected_execution_role" {
-  # Given the analyzer Lambda,
-  # when Terraform evaluates its execution role,
-  # then it must use the Asgard Lambda IAM role.
+  # Given the WAF Bedrock analyzer Lambda is configured with an execution role,
+  # when the role assignment is checked,
+  # then it should use the Asgard Lambda role.
 
   assert {
     condition = (
@@ -139,9 +138,9 @@ check "waf_bedrock_lambda_uses_expected_execution_role" {
 }
 
 check "waf_bedrock_lambda_uses_expected_runtime_and_handler" {
-  # Given the analyzer Lambda,
-  # when Terraform evaluates the runtime and handler,
-  # then it must use Python 3.14 and the expected entry point.
+  # Given the WAF Bedrock analyzer Lambda is configured with a runtime and handler,
+  # when the runtime configuration is checked,
+  # then it should use Python 3.14 and waf_bedrock_analyzer.lambda_handler.
 
   assert {
     condition = (
@@ -156,9 +155,9 @@ check "waf_bedrock_lambda_uses_expected_runtime_and_handler" {
 }
 
 check "waf_bedrock_lambda_timeout_is_60_seconds" {
-  # Given the analyzer Lambda,
-  # when Terraform evaluates the timeout,
-  # then it must be configured for exactly 60 seconds.
+  # Given the WAF Bedrock analyzer Lambda is configured with a timeout,
+  # when the timeout is checked,
+  # then it should be set to 60 seconds.
 
   assert {
     condition = (
@@ -170,9 +169,9 @@ check "waf_bedrock_lambda_timeout_is_60_seconds" {
 }
 
 check "lambda_uses_only_expected_environment_variables" {
-  # Given the response agent configuration requirements,
-  # when Terraform evaluates the Lambda environment variable names,
-  # then the function must contain only the six required variables.
+  # Given the Asgard Lambda is configured with environment variables,
+  # when the environment variable names are checked,
+  # then only the six approved variables should be present.
 
   assert {
     condition = toset(
@@ -193,9 +192,9 @@ check "lambda_uses_only_expected_environment_variables" {
 }
 
 check "waf_bedrock_lambda_environment_references_expected_resources" {
-  # Given the analyzer Lambda,
-  # when Terraform evaluates the environment variable values,
-  # then every variable must reference the expected resource or approved value.
+  # Given the WAF Bedrock analyzer Lambda is configured with environment variables,
+  # when the environment variable values are checked,
+  # then they should reference the expected resources and approved values.
 
   assert {
     condition = (
@@ -224,9 +223,9 @@ check "waf_bedrock_lambda_environment_references_expected_resources" {
 ###############################################################################
 
 check "node_auth_uses_expected_archive" {
-  # Given the Node.js authentication Lambda package,
-  # when Terraform evaluates the deployment artifact,
-  # then the function must use the archive generated from auth.js.
+  # Given the Node.js authentication Lambda is configured with a deployment archive,
+  # when the archive source, output, and source hash are checked,
+  # then it should use the ZIP archive generated from auth.js.
 
   assert {
     condition = (
@@ -250,9 +249,9 @@ check "node_auth_uses_expected_archive" {
 }
 
 check "node_auth_uses_expected_execution_role" {
-  # Given the Node.js authentication Lambda,
-  # when Terraform evaluates its execution role,
-  # then it must use the Asgard Lambda IAM role.
+  # Given the Node.js authentication Lambda is configured with an execution role,
+  # when the role assignment is checked,
+  # then it should use the Asgard Lambda role.
 
   assert {
     condition = (
@@ -265,9 +264,9 @@ check "node_auth_uses_expected_execution_role" {
 }
 
 check "node_auth_uses_expected_runtime_and_handler" {
-  # Given the Node.js authentication Lambda,
-  # when Terraform evaluates its runtime configuration,
-  # then it must use Node.js 24 and the auth.handler entry point.
+  # Given the Node.js authentication Lambda is configured with a runtime and handler,
+  # when the runtime configuration is checked,
+  # then it should use Node.js 24 and auth.handler.
 
   assert {
     condition = (
@@ -281,9 +280,9 @@ check "node_auth_uses_expected_runtime_and_handler" {
 }
 
 check "node_auth_uses_expected_environment_variables" {
-  # Given the Node.js authentication Lambda,
-  # when Terraform evaluates its environment configuration,
-  # then it must contain only the approved environment and log-level variables.
+  # Given the Node.js authentication Lambda is configured with environment variables,
+  # when the environment configuration is checked,
+  # then only ENVIRONMENT=production and LOG_LEVEL=info should be present.
 
   assert {
     condition = (
@@ -313,9 +312,9 @@ check "node_auth_uses_expected_environment_variables" {
 ###############################################################################
 
 check "python_auth_uses_expected_archive" {
-  # Given the Python authentication Lambda package,
-  # when Terraform evaluates the deployment artifact,
-  # then the function must use the archive generated from auth.py.
+  # Given the Python authentication Lambda is configured with a deployment archive,
+  # when the archive source, output, and source hash are checked,
+  # then it should use the ZIP archive generated from auth.py.
 
   assert {
     condition = (
@@ -339,9 +338,9 @@ check "python_auth_uses_expected_archive" {
 }
 
 check "python_auth_uses_expected_execution_role" {
-  # Given the Python authentication Lambda,
-  # when Terraform evaluates its execution role,
-  # then it must use the Asgard Lambda IAM role.
+  # Given the Python authentication Lambda is configured with an execution role,
+  # when the role assignment is checked,
+  # then it should use the Asgard Lambda role.
 
   assert {
     condition = (
@@ -354,9 +353,9 @@ check "python_auth_uses_expected_execution_role" {
 }
 
 check "python_auth_uses_expected_runtime_and_handler" {
-  # Given the Python authentication Lambda,
-  # when Terraform evaluates its runtime configuration,
-  # then it must use Python 3.14 and the auth.lambda_handler entry point.
+  # Given the Python authentication Lambda is configured with a runtime and handler,
+  # when the runtime configuration is checked,
+  # then it should use Python 3.14 and auth.lambda_handler.
 
   assert {
     condition = (
@@ -370,9 +369,9 @@ check "python_auth_uses_expected_runtime_and_handler" {
 }
 
 check "python_auth_uses_expected_environment_variables" {
-  # Given the Python authentication Lambda,
-  # when Terraform evaluates its environment configuration,
-  # then it must contain only the approved environment and log-level variables.
+  # Given the Python authentication Lambda is configured with environment variables,
+  # when the environment configuration is checked,
+  # then only ENVIRONMENT=production and LOG_LEVEL=info should be present.
 
   assert {
     condition = (
@@ -402,9 +401,9 @@ check "python_auth_uses_expected_environment_variables" {
 ###############################################################################
 
 check "executive_dashboard_archive_uses_expected_source" {
-  # Given the Executive Dashboard Lambda package,
-  # when Terraform evaluates the archive configuration,
-  # then it must package the expected directory into the expected ZIP file.
+  # Given the Executive Dashboard archive is configured,
+  # when the archive source and output are checked,
+  # then it should package the executive dashboard directory into the expected ZIP file.
 
   assert {
     condition = (
@@ -422,9 +421,9 @@ check "executive_dashboard_archive_uses_expected_source" {
 }
 
 check "executive_dashboard_lambda_uses_expected_package" {
-  # Given the Executive Dashboard deployment package,
-  # when Terraform evaluates the Lambda deployment package,
-  # then it must use the generated ZIP archive and matching source hash.
+  # Given the Executive Dashboard Lambda is configured with a deployment package,
+  # when the deployment package and source hash are checked,
+  # then it should use the generated Executive Dashboard archive and matching source hash.
 
   assert {
     condition = (
@@ -440,9 +439,9 @@ check "executive_dashboard_lambda_uses_expected_package" {
 }
 
 check "executive_dashboard_lambda_uses_expected_execution_role" {
-  # Given the Executive Dashboard Lambda,
-  # when Terraform evaluates its execution role,
-  # then it must use the Asgard Lambda IAM role.
+  # Given the Executive Dashboard Lambda is configured with an execution role,
+  # when the role assignment is checked,
+  # then it should use the Asgard Lambda role.
 
   assert {
     condition = (
@@ -455,9 +454,9 @@ check "executive_dashboard_lambda_uses_expected_execution_role" {
 }
 
 check "executive_dashboard_lambda_uses_expected_runtime_and_handler" {
-  # Given the Executive Dashboard Lambda,
-  # when Terraform evaluates the runtime and handler,
-  # then it must use Python 3.14 and executive_dashboard_agent.lambda_handler.
+  # Given the Executive Dashboard Lambda is configured with a runtime and handler,
+  # when the runtime configuration is checked,
+  # then it should use Python 3.14 and executive_dashboard_agent.lambda_handler.
 
   assert {
     condition = (
@@ -472,9 +471,9 @@ check "executive_dashboard_lambda_uses_expected_runtime_and_handler" {
 }
 
 check "executive_dashboard_lambda_uses_expected_compute_settings" {
-  # Given the Executive Dashboard Lambda,
-  # when Terraform evaluates the compute configuration,
-  # then it must use the approved timeout, memory, and ephemeral storage values.
+  # Given the Executive Dashboard Lambda is configured with compute settings,
+  # when the timeout, memory, and ephemeral storage are checked,
+  # then they should be set to 120 seconds, 512 MB, and 512 MB respectively.
 
   assert {
     condition = (
@@ -490,9 +489,9 @@ check "executive_dashboard_lambda_uses_expected_compute_settings" {
 }
 
 check "executive_dashboard_lambda_uses_only_expected_environment_variables" {
-  # Given the Executive Dashboard Lambda,
-  # when Terraform evaluates the environment variable names,
-  # then only the approved variables may exist.
+  # Given the Executive Dashboard Lambda is configured with environment variables,
+  # when the environment variable names are checked,
+  # then only the approved Executive Dashboard variables should be present.
 
   assert {
     condition = (
@@ -520,9 +519,9 @@ check "executive_dashboard_lambda_uses_only_expected_environment_variables" {
 }
 
 check "executive_dashboard_lambda_environment_references_expected_resources" {
-  # Given the Executive Dashboard Lambda,
-  # when Terraform evaluates the environment variable values,
-  # then each variable must reference the expected resource or approved value.
+  # Given the Executive Dashboard Lambda is configured with environment variables,
+  # when the environment variable values are checked,
+  # then they should reference the expected resources and approved report settings.
 
   assert {
     condition = (
@@ -569,9 +568,9 @@ check "executive_dashboard_lambda_environment_references_expected_resources" {
 ###############################################################################
 
 check "compliance_agent_archive_uses_expected_source" {
-  # Given the Compliance Agent Lambda package,
-  # when Terraform evaluates the archive configuration,
-  # then it must package the compliance directory into the expected ZIP file.
+  # Given the Compliance Agent archive is configured,
+  # when the archive source and output are checked,
+  # then it should package the compliance directory into the expected ZIP file.
 
   assert {
     condition = (
@@ -589,9 +588,9 @@ check "compliance_agent_archive_uses_expected_source" {
 }
 
 check "compliance_agent_lambda_uses_expected_package" {
-  # Given the Compliance Agent deployment package,
-  # when Terraform evaluates the Lambda deployment package,
-  # then it must use the generated ZIP archive and matching source hash.
+  # Given the Compliance Agent Lambda is configured with a deployment package,
+  # when the deployment package and source hash are checked,
+  # then it should use the generated Compliance Agent archive and matching source hash.
 
   assert {
     condition = (
@@ -607,9 +606,9 @@ check "compliance_agent_lambda_uses_expected_package" {
 }
 
 check "compliance_agent_lambda_uses_expected_execution_role" {
-  # Given the Compliance Agent Lambda,
-  # when Terraform evaluates its execution role,
-  # then it must use the Asgard Lambda IAM role.
+  # Given the Compliance Agent Lambda is configured with an execution role,
+  # when the role assignment is checked,
+  # then it should use the Asgard Lambda role.
 
   assert {
     condition = (
@@ -622,9 +621,9 @@ check "compliance_agent_lambda_uses_expected_execution_role" {
 }
 
 check "compliance_agent_lambda_uses_expected_runtime_and_handler" {
-  # Given the Compliance Agent Python source file,
-  # when Terraform evaluates the runtime and handler,
-  # then it must use Python 3.14 and compliance.lambda_handler.
+  # Given the Compliance Agent Lambda is configured with a runtime and handler,
+  # when the runtime configuration is checked,
+  # then it should use Python 3.14 and compliance.lambda_handler.
 
   assert {
     condition = (
@@ -639,9 +638,9 @@ check "compliance_agent_lambda_uses_expected_runtime_and_handler" {
 }
 
 check "compliance_agent_lambda_uses_expected_compute_settings" {
-  # Given the Compliance Agent workload,
-  # when Terraform evaluates its compute configuration,
-  # then it must use the approved timeout, memory, and architecture.
+  # Given the Compliance Agent Lambda is configured with compute settings,
+  # when the timeout, memory, and architecture are checked,
+  # then they should be set to 180 seconds, 512 MB, and x86_64 respectively.
 
   assert {
     condition = (

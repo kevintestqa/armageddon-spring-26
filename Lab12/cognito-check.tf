@@ -3,9 +3,9 @@
 ###############################################################################
 
 check "cognito_resource_server_uses_expected_scopes" {
-  # Given the Asgard Cognito resource server,
-  # when Terraform evaluates its OAuth scopes,
-  # then it must expose exactly the admin and user scopes.
+  # Given the Asgard Cognito resource server is configured with OAuth scopes,
+  # when the resource server configuration is checked,
+  # then it should use the Asgard API identifier and expose the admin and user scopes.
 
   assert {
     condition = (
@@ -32,9 +32,9 @@ check "cognito_resource_server_uses_expected_scopes" {
 }
 
 check "cognito_user_pool_requires_mfa" {
-  # Given the Asgard Cognito user pool,
-  # when Terraform evaluates authentication security,
-  # then MFA and software-token MFA must be enabled.
+  # Given the Asgard Cognito user pool is configured with MFA,
+  # when the MFA settings are checked,
+  # then MFA and software-token MFA should be enabled.
 
   assert {
     condition = (
@@ -50,9 +50,9 @@ check "cognito_user_pool_requires_mfa" {
 }
 
 check "cognito_user_pool_uses_expected_password_policy" {
-  # Given the Asgard Cognito user pool,
-  # when Terraform evaluates the password policy,
-  # then passwords must meet the approved length and character requirements.
+  # Given the Asgard Cognito user pool is configured with a password policy,
+  # when the password policy is checked,
+  # then passwords should require at least eight characters with uppercase and lowercase letters.
 
   assert {
     condition = (
@@ -78,9 +78,9 @@ check "cognito_user_pool_uses_expected_password_policy" {
 }
 
 check "cognito_user_pool_auto_verifies_email" {
-  # Given the Asgard Cognito user pool,
-  # when Terraform evaluates account verification,
-  # then email must be the only automatically verified attribute.
+  # Given the Asgard Cognito user pool is configured with automatic verification,
+  # when the verified attributes are checked,
+  # then email should be the only automatically verified attribute.
 
   assert {
     condition = (
@@ -96,9 +96,9 @@ check "cognito_user_pool_auto_verifies_email" {
 }
 
 check "cognito_user_pool_uses_expected_recovery_methods" {
-  # Given the Asgard Cognito user pool,
-  # when Terraform evaluates account recovery,
-  # then verified email must be first and verified phone must be second.
+  # Given the Asgard Cognito user pool is configured with account recovery methods,
+  # when the recovery methods are checked,
+  # then verified email should have first priority and verified phone should have second priority.
 
   assert {
     condition = (
@@ -128,9 +128,9 @@ check "cognito_user_pool_uses_expected_recovery_methods" {
 }
 
 check "cognito_client_uses_authorization_code_flow" {
-  # Given the Asgard Cognito application client,
-  # when Terraform evaluates OAuth configuration,
-  # then it must use the authorization-code flow without a client secret.
+  # Given the Asgard Cognito application client is configured for OAuth,
+  # when the OAuth flow settings are checked,
+  # then it should use the authorization-code flow without a generated client secret.
 
   assert {
     condition = (
@@ -152,9 +152,9 @@ check "cognito_client_uses_authorization_code_flow" {
 }
 
 check "cognito_client_uses_expected_oauth_scopes" {
-  # Given the Asgard Cognito application client,
-  # when Terraform evaluates its OAuth permissions,
-  # then it must request the identity scopes and both Asgard API scopes.
+  # Given the Asgard Cognito application client is configured with OAuth scopes,
+  # when the allowed scopes are checked,
+  # then it should include the identity scopes and both Asgard API scopes.
 
   assert {
     condition = (
@@ -174,9 +174,9 @@ check "cognito_client_uses_expected_oauth_scopes" {
 }
 
 check "cognito_client_uses_expected_authentication_flows" {
-  # Given the Asgard Cognito application client,
-  # when Terraform evaluates explicit authentication flows,
-  # then password, SRP, and refresh-token authentication must be enabled.
+  # Given the Asgard Cognito application client is configured with authentication flows,
+  # when the explicit authentication flows are checked,
+  # then password, SRP, and refresh-token authentication should be enabled.
 
   assert {
     condition = (
@@ -194,9 +194,9 @@ check "cognito_client_uses_expected_authentication_flows" {
 }
 
 check "cognito_groups_use_expected_precedence" {
-  # Given the Asgard Cognito groups,
-  # when Terraform evaluates group precedence,
-  # then the administrator group must take priority over the general group.
+  # Given the Asgard Cognito administrator and general-user groups are configured,
+  # when the group precedence values are checked,
+  # then the administrator group should have higher priority than the general-user group.
 
   assert {
     condition = (
@@ -213,9 +213,9 @@ check "cognito_groups_use_expected_precedence" {
 }
 
 check "cognito_users_use_expected_user_pool" {
-  # Given the Odin and Thor Cognito users,
-  # when Terraform evaluates their user-pool assignments,
-  # then both users must belong to the Asgard user pool.
+  # Given the Odin and Thor Cognito users are configured,
+  # when their user-pool assignments are checked,
+  # then both users should belong to the Asgard user pool with the expected usernames.
 
   assert {
     condition = (
@@ -235,9 +235,9 @@ check "cognito_users_use_expected_user_pool" {
 }
 
 check "odin_is_assigned_to_admin_group" {
-  # Given the Odin Cognito user,
-  # when Terraform evaluates group membership,
-  # then Odin must be assigned to the administrator group.
+  # Given the Odin Cognito user is configured with a group membership,
+  # when Odin's group assignment is checked,
+  # then Odin should belong to the Asgard administrator group.
 
   assert {
     condition = (
@@ -256,9 +256,9 @@ check "odin_is_assigned_to_admin_group" {
 }
 
 check "thor_is_assigned_to_general_group" {
-  # Given the Thor Cognito user,
-  # when Terraform evaluates group membership,
-  # then Thor must be assigned to the general user group.
+  # Given the Thor Cognito user is configured with a group membership,
+  # when Thor's group assignment is checked,
+  # then Thor should belong to the Asgard general-user group.
 
   assert {
     condition = (

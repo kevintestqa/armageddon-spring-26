@@ -3,9 +3,9 @@
 ###############################################################################
 
 check "asgard_api_uses_expected_configuration" {
-  # Given the Asgard REST API,
-  # when Terraform evaluates the API configuration,
-  # then it must use the approved name and a regional endpoint.
+  # Given the Asgard REST API is configured,
+  # when the API configuration is checked,
+  # then the API should use the asgard_api_rest name and a REGIONAL endpoint.
 
   assert {
     condition = (
@@ -21,9 +21,9 @@ check "asgard_api_uses_expected_configuration" {
 }
 
 check "api_gateway_uses_expected_resource_paths" {
-  # Given the Node.js and Python API resources,
-  # when Terraform evaluates their resource paths,
-  # then the REST API must expose the /node and /python endpoints.
+  # Given the REST API is configured with Node.js and Python resources,
+  # when the resource paths are checked,
+  # then the API should expose the /node and /python endpoints.
 
   assert {
     condition = (
@@ -43,9 +43,9 @@ check "api_gateway_uses_expected_resource_paths" {
 }
 
 check "api_gateway_methods_use_get" {
-  # Given the REST API methods,
-  # when Terraform evaluates the HTTP methods,
-  # then both endpoints must use GET.
+  # Given the REST API resources are configured with methods,
+  # when the HTTP methods are checked,
+  # then both endpoints should use GET.
 
   assert {
     condition = (
@@ -59,9 +59,9 @@ check "api_gateway_methods_use_get" {
 }
 
 check "api_gateway_methods_use_cognito_authorization" {
-  # Given the protected REST API methods,
-  # when Terraform evaluates authorization,
-  # then both methods must use Cognito User Pools.
+  # Given the REST API methods are configured with authorization,
+  # when the authorization settings are checked,
+  # then both methods should use the Asgard Cognito authorizer.
 
   assert {
     condition = (
@@ -83,9 +83,9 @@ check "api_gateway_methods_use_cognito_authorization" {
 }
 
 check "api_gateway_methods_use_expected_scope" {
-  # Given the protected REST API methods,
-  # when Terraform evaluates authorization scopes,
-  # then both methods must require the administrator scope.
+  # Given the REST API methods are configured with authorization scopes,
+  # when the scopes are checked,
+  # then both methods should require the aws.cognito.signin.user.admin scope.
 
   assert {
     condition = (
@@ -107,9 +107,9 @@ check "api_gateway_methods_use_expected_scope" {
 }
 
 check "node_api_integrates_with_node_lambda" {
-  # Given the /node endpoint,
-  # when Terraform evaluates the integration,
-  # then it must proxy requests to the Node.js authentication Lambda.
+  # Given the /node endpoint is configured with a Lambda integration,
+  # when the integration settings are checked,
+  # then requests should be proxied to the Node.js authentication Lambda.
 
   assert {
     condition = (
@@ -131,9 +131,9 @@ check "node_api_integrates_with_node_lambda" {
 }
 
 check "python_api_integrates_with_python_lambda" {
-  # Given the /python endpoint,
-  # when Terraform evaluates the integration,
-  # then it must proxy requests to the Python authentication Lambda.
+  # Given the /python endpoint is configured with a Lambda integration,
+  # when the integration settings are checked,
+  # then requests should be proxied to the Python authentication Lambda.
 
   assert {
     condition = (
@@ -155,9 +155,9 @@ check "python_api_integrates_with_python_lambda" {
 }
 
 check "api_gateway_uses_qa_stage" {
-  # Given the REST API deployment,
-  # when Terraform evaluates the deployment stage,
-  # then the deployment must use the qa stage.
+  # Given the REST API is configured with a deployment stage,
+  # when the stage configuration is checked,
+  # then the API should use the qa stage.
 
   assert {
     condition = (
@@ -175,9 +175,9 @@ check "api_gateway_uses_qa_stage" {
 }
 
 check "authorizer_uses_expected_configuration" {
-  # Given the Cognito authorizer,
-  # when Terraform evaluates the authorizer configuration,
-  # then it must use the Asgard Cognito user pool and Authorization header.
+  # Given the REST API is configured with a Cognito authorizer,
+  # when the authorizer settings are checked,
+  # then it should use the Asgard user pool and Authorization header.
 
   assert {
     condition = (
@@ -199,9 +199,9 @@ check "authorizer_uses_expected_configuration" {
 }
 
 check "api_gateway_can_invoke_node_lambda" {
-  # Given the Node.js Lambda integration,
-  # when Terraform evaluates the Lambda permission,
-  # then API Gateway must be allowed to invoke the Node.js function.
+  # Given API Gateway is configured to invoke the Node.js Lambda,
+  # when the Lambda permission is checked,
+  # then API Gateway should have permission to invoke the Node.js authentication function.
 
   assert {
     condition = (
@@ -220,9 +220,9 @@ check "api_gateway_can_invoke_node_lambda" {
 }
 
 check "api_gateway_can_invoke_python_lambda" {
-  # Given the Python Lambda integration,
-  # when Terraform evaluates the Lambda permission,
-  # then API Gateway must be allowed to invoke the Python function.
+  # Given API Gateway is configured to invoke the Python Lambda,
+  # when the Lambda permission is checked,
+  # then API Gateway should have permission to invoke the Python authentication function.
 
   assert {
     condition = (
