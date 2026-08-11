@@ -1,5 +1,11 @@
 //tests the rule
 
+//Solves the issue of "Provider "registry.terraform.io/hashicorp/aws" requires explicit
+# │ configuration. Add a provider block to the root module and configure the
+# │ provider's required arguments as described in the provider documentation."
+# Mock will use version 6.55 of the AWS provider(which I defined), which is compatible with Terraform 1.5.0 and above.
+mock_provider "aws" {}
+
 run "valid_executive_dashboard_agent_memory" {
   command = plan
 
