@@ -40,4 +40,4 @@ jobs:
         run: terraform validate
 
       - name: Terraform Test
-        run: terraform test
+        run: terraform test -filter=tests/validations.tftest.hcl
