@@ -12,7 +12,7 @@ resource "aws_lambda_function" "asgard_lambda_function" {
   code_sha256   = data.archive_file.asgard_lambda_function.output_base64sha256
   timeout       = 60
 
-  runtime = "python3.14"
+  runtime = var.lambda_python_runtime
 
   environment {
     variables = {
@@ -25,6 +25,12 @@ resource "aws_lambda_function" "asgard_lambda_function" {
       ENABLE_BEDROCK   = "true"
     }
   }
+  lifecycle {
+    precondition {
+      condition     = var.lambda_python_runtime == "python3.14"
+      error_message = "Runtime must be python3.14"
+    }
+  }
 }
 
 resource "aws_lambda_function" "waf_bedrock_analyzer" {
@@ -35,7 +41,7 @@ resource "aws_lambda_function" "waf_bedrock_analyzer" {
   code_sha256   = data.archive_file.waf_bedrock_analyzer.output_base64sha256
   timeout       = 60
 
-  runtime = "python3.14"
+  runtime = var.lambda_python_runtime
 
   environment {
     variables = {
@@ -44,6 +50,12 @@ resource "aws_lambda_function" "waf_bedrock_analyzer" {
       WAF_LOG_GROUP    = aws_cloudwatch_log_group.asgard_waf_logs.name
       DYNAMODB_TABLE   = aws_dynamodb_table.asgard_waf_events.name
       BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
+    }
+  }
+  lifecycle {
+    precondition {
+      condition     = var.lambda_python_runtime == "python3.14"
+      error_message = "Runtime must be python3.14"
     }
   }
 }
@@ -95,12 +107,19 @@ resource "aws_lambda_function" "python_auth" {
   handler       = "auth.lambda_handler"
   code_sha256   = data.archive_file.python_archive.output_base64sha256
 
-  runtime = "python3.14"
+  runtime = var.lambda_python_runtime
 
   environment {
     variables = {
       ENVIRONMENT = "production"
       LOG_LEVEL   = "info"
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.lambda_python_runtime == "python3.14"
+      error_message = "Runtime must be python3.14"
     }
   }
 }
@@ -120,12 +139,12 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
   handler       = "executive_dashboard_agent.lambda_handler"
   code_sha256   = data.archive_file.executive_dashboard_agent.output_base64sha256
 
-  runtime       = "python3.14"
-  architectures = ["x86_64"] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
+  runtime       = var.lambda_python_runtime
+  architectures = [var.lambda_architecture] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
   timeout       = 120
-  memory_size   = 512
+  memory_size   = var.lambda_memory_size
   ephemeral_storage {
-    size = 512
+    size = var.lambda_memory_size
   }
 
   environment {
@@ -147,6 +166,18 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
       REPORT_TITLE      = "Executive Security Report"
     }
   }
+
+  lifecycle {
+    precondition {
+      condition     = var.lambda_architecture == "x86_64"
+      error_message = "Architecture must be x86_64"
+    }
+
+    precondition {
+      condition     = var.lambda_python_runtime == "python3.14"
+      error_message = "Runtime must be python3.14"
+    }
+  }
 }
 
 data "archive_file" "compliance_agent" {
@@ -163,12 +194,12 @@ resource "aws_lambda_function" "compliance_agent" {
   handler       = "compliance.lambda_handler"
   code_sha256   = data.archive_file.compliance_agent.output_base64sha256
 
-  runtime       = "python3.14"
-  architectures = ["x86_64"] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
+  runtime       = var.lambda_python_runtime
+  architectures = [var.lambda_architecture] // Specify the architecture on Mac M1/M2 machines to avoid the Unable to import module 'executive_dashboard_agent': cannot import name '_imaging' from 'PIL error when running the Lambda function.  Solution is to use Docker as a temporary Linux build environment for python 3.14 and x86_64 architecture.
   timeout       = 180
-  memory_size   = 512
+  memory_size   = var.lambda_memory_size
   ephemeral_storage {
-    size = 512
+    size = var.lambda_memory_size
   }
 
   environment {
@@ -188,6 +219,17 @@ resource "aws_lambda_function" "compliance_agent" {
       ORGANIZATION_NAME  = "Asgard Cloud Security"
       REPORT_TITLE       = "Compliance Evidence Report"
       UNEVALUATED_STATUS = "REVIEW"
+    }
+  }
+  lifecycle {
+    precondition {
+      condition     = var.lambda_architecture == "x86_64"
+      error_message = "Architecture must be x86_64"
+    }
+
+    precondition {
+      condition     = var.lambda_python_runtime == "python3.14"
+      error_message = "Runtime must be python3.14"
     }
   }
 }

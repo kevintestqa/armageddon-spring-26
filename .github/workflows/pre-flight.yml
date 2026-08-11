@@ -1,0 +1,43 @@
+name: Terraform Tests
+
+on:
+  push:
+    branches:
+      - Pre-Check-Improvements
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  terraform-tests:
+    name: Terraform Validation Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./Lab12
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.14.6"
+
+      - name: Terraform Version
+        run: terraform version
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Test
+        run: terraform test -filter=tests/validations.tftest.hcl

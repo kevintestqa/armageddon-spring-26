@@ -276,18 +276,18 @@ check "lambda_policy_allows_describing_compliance_data_sources" {
             tolist(statement.Action),
             [statement.Action]
           )
-        ) == toset([
-          "dynamodb:DescribeTable"
+          ) == toset([
+            "dynamodb:DescribeTable"
         ])
         && toset(
           try(
             tolist(statement.Resource),
             [statement.Resource]
           )
-        ) == toset([
-          aws_dynamodb_table.asgard_waf_events.arn,
-          aws_dynamodb_table.asgard_waf_correlation_findings.arn,
-          aws_dynamodb_table.asgard_security_incidents.arn
+          ) == toset([
+            aws_dynamodb_table.asgard_waf_events.arn,
+            aws_dynamodb_table.asgard_waf_correlation_findings.arn,
+            aws_dynamodb_table.asgard_security_incidents.arn
         ])
       )
     ]) == 1
