@@ -1,7 +1,8 @@
 check "critical_rule_filters_critical_findings" {
-  # Given the critical EventBridge rule,
-  # when its event pattern is evaluated,
-  # then its severity list must contain only CRITICAL
+  # Given the critical EventBridge rule is configured with an event pattern,
+  # when the severity filter is checked,
+  # then the rule should contain only CRITICAL severity.
+
   assert {
     condition = toset(
       jsondecode(
@@ -14,9 +15,10 @@ check "critical_rule_filters_critical_findings" {
 }
 
 check "medium_high_rule_filters_expected_severities" {
-  # Given the medium/high EventBridge rule,
-  # when its event pattern is evaluated,
-  # then its severity list must contain only MEDIUM and HIGH
+  # Given the medium/high EventBridge rule is configured with an event pattern,
+  # when the severity filter is checked,
+  # then the rule should contain only MEDIUM and HIGH severities.
+
   assert {
     condition = toset(
       jsondecode(

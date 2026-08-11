@@ -3,9 +3,9 @@
 ###############################################################################
 
 check "sns_topics_use_expected_names" {
-  # Given the two Asgard alert channels,
-  # when Terraform evaluates the SNS topic names,
-  # then the critical and medium/high topics must use their expected names.
+  # Given the critical and medium/high SNS topics are configured,
+  # when the topic names are checked,
+  # then they should use the expected critical and medium/high incident names.
 
   assert {
     condition = (
@@ -21,9 +21,9 @@ check "sns_topics_use_expected_names" {
 }
 
 check "sns_topics_use_distinct_names" {
-  # Given separate alert channels,
-  # when Terraform evaluates the SNS topic names,
-  # then each channel must use a unique SNS topic.
+  # Given the critical and medium/high SNS topics are configured,
+  # when their topic names are compared,
+  # then each alert channel should use a unique SNS topic name.
 
   assert {
     condition = (
@@ -36,9 +36,9 @@ check "sns_topics_use_distinct_names" {
 }
 
 check "critical_subscription_targets_critical_topic" {
-  # Given the critical alert subscription,
-  # when Terraform evaluates the subscription,
-  # then it must publish to the critical SNS topic.
+  # Given the critical alert subscription is configured,
+  # when its target topic is checked,
+  # then it should reference the critical SNS topic.
 
   assert {
     condition = (
@@ -51,9 +51,9 @@ check "critical_subscription_targets_critical_topic" {
 }
 
 check "medium_high_subscription_targets_medium_high_topic" {
-  # Given the medium/high alert subscription,
-  # when Terraform evaluates the subscription,
-  # then it must publish to the medium/high SNS topic.
+  # Given the medium/high alert subscription is configured,
+  # when its target topic is checked,
+  # then it should reference the medium/high SNS topic.
 
   assert {
     condition = (
@@ -66,9 +66,9 @@ check "medium_high_subscription_targets_medium_high_topic" {
 }
 
 check "sns_subscriptions_use_email_protocol" {
-  # Given the SNS subscriptions,
-  # when Terraform evaluates the delivery protocol,
-  # then both subscriptions must use email.
+  # Given the SNS subscriptions are configured with a delivery protocol,
+  # when the protocol is checked,
+  # then both subscriptions should use email.
 
   assert {
     condition = (
@@ -82,9 +82,9 @@ check "sns_subscriptions_use_email_protocol" {
 }
 
 check "sns_subscriptions_use_expected_endpoint" {
-  # Given the configured notification email,
-  # when Terraform evaluates the subscription endpoint,
-  # then both subscriptions must use var.sns_email_endpoint.
+  # Given the SNS subscriptions are configured with notification endpoints,
+  # when the subscription endpoints are checked,
+  # then both subscriptions should use var.sns_email_endpoint.
 
   assert {
     condition = (

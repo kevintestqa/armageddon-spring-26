@@ -9,9 +9,9 @@ locals {
 }
 
 check "lambda_role_trusts_only_lambda_service" {
-  # Given the Lambda execution role trust policy,
-  # when Terraform evaluates the trusted principal and allowed action,
-  # then only the Lambda service may assume the role through sts:AssumeRole.
+  # Given the Lambda execution role is configured with a trust policy,
+  # when the trusted principal and allowed action are checked,
+  # then only the Lambda service should be allowed to assume the role through sts:AssumeRole.
 
   assert {
     condition = (
@@ -30,10 +30,9 @@ check "lambda_role_trusts_only_lambda_service" {
 }
 
 check "lambda_policy_uses_expected_dynamodb_permissions" {
-  # Given the Lambda application IAM policy,
-  # when Terraform evaluates the DynamoDB permission statements,
-  # then correlation findings must allow GetItem, UpdateItem, PutItem, and Scan,
-  # while security incidents and WAF events must share PutItem and Scan permissions.
+  # Given the Lambda application IAM policy is configured with DynamoDB permissions,
+  # when the DynamoDB statements are checked,
+  # then each Asgard table should have only the required actions and resources.
 
   assert {
     condition = (
@@ -75,9 +74,9 @@ check "lambda_policy_uses_expected_dynamodb_permissions" {
 }
 
 check "lambda_policy_limits_sns_publish_to_critical_alerts" {
-  # Given the Lambda application IAM policy,
-  # when Terraform evaluates the SNS permission statement,
-  # then Lambda may publish only to the critical alerts topic.
+  # Given the Lambda application IAM policy is configured with SNS permissions,
+  # when the SNS publish statement is checked,
+  # then Lambda should be allowed to publish only to the critical alerts topic.
 
   assert {
     condition = length([
@@ -98,9 +97,9 @@ check "lambda_policy_limits_sns_publish_to_critical_alerts" {
 }
 
 check "lambda_policy_allows_only_bedrock_model_invocation" {
-  # Given the Lambda application IAM policy,
-  # when Terraform evaluates the Bedrock permission statement,
-  # then the statement must allow only bedrock:InvokeModel.
+  # Given the Lambda application IAM policy is configured with Bedrock permissions,
+  # when the Bedrock statement is checked,
+  # then only bedrock:InvokeModel should be allowed.
 
   assert {
     condition = length([
@@ -120,9 +119,9 @@ check "lambda_policy_allows_only_bedrock_model_invocation" {
 }
 
 check "lambda_app_policy_allows_filter_log_events" {
-  # Given the Asgard Lambda application policy,
-  # when Terraform evaluates the CloudWatch Logs permissions,
-  # then the Lambda role must be allowed to filter log events.
+  # Given the Lambda application IAM policy is configured with CloudWatch Logs permissions,
+  # when the log permissions are checked,
+  # then logs:FilterLogEvents should be allowed.
 
   assert {
     condition = length([
@@ -142,9 +141,9 @@ check "lambda_app_policy_allows_filter_log_events" {
 }
 
 check "lambda_policy_allows_eventbridge_put_events" {
-  # Given the Lambda application IAM policy,
-  # when Terraform evaluates the EventBridge permission statement,
-  # then the Lambda role must be allowed to submit events to the default event bus.
+  # Given the Lambda application IAM policy is configured with EventBridge permissions,
+  # when the EventBridge statement is checked,
+  # then events:PutEvents should be allowed only on the default event bus.
 
   assert {
     condition = length([
@@ -165,9 +164,9 @@ check "lambda_policy_allows_eventbridge_put_events" {
 }
 
 check "lambda_policy_limits_report_uploads_to_expected_prefix" {
-  # Given the executive report S3 bucket exists,
-  # when Terraform evaluates the S3 permission statement,
-  # then Lambda may upload objects only under the executive-reports prefix.
+  # Given the Lambda application IAM policy is configured with executive-report S3 permissions,
+  # when the upload statement is checked,
+  # then objects should be writable only under the executive-reports prefix.
 
   assert {
     condition = length([
@@ -188,9 +187,9 @@ check "lambda_policy_limits_report_uploads_to_expected_prefix" {
 }
 
 check "lambda_policy_uses_expected_compliance_dynamodb_permissions" {
-  # Given the Lambda application IAM policy,
-  # when Terraform evaluates the compliance DynamoDB permission statement,
-  # then Lambda may write compliance records only to the evidence and findings tables.
+  # Given the Lambda application IAM policy is configured with compliance DynamoDB permissions,
+  # when the compliance table statements are checked,
+  # then only PutItem and BatchWriteItem should be allowed on the compliance evidence and findings tables.
 
   assert {
     condition = length([
@@ -214,9 +213,9 @@ check "lambda_policy_uses_expected_compliance_dynamodb_permissions" {
 }
 
 check "lambda_policy_limits_compliance_report_uploads_to_expected_prefix" {
-  # Given the compliance report S3 bucket exists,
-  # when Terraform evaluates the compliance report upload statement,
-  # then Lambda may upload objects only under the compliance-reports prefix.
+  # Given the Lambda application IAM policy is configured with compliance-report S3 permissions,
+  # when the upload statement is checked,
+  # then objects should be writable only under the compliance-reports prefix.
 
   assert {
     condition = length([
@@ -237,9 +236,9 @@ check "lambda_policy_limits_compliance_report_uploads_to_expected_prefix" {
 }
 
 check "lambda_policy_allows_listing_report_buckets" {
-  # Given the compliance agent evaluates report artifacts,
-  # when Terraform evaluates the S3 bucket-listing permission,
-  # then Lambda may list only the compliance and executive report buckets.
+  # Given the Lambda application IAM policy is configured with S3 bucket-listing permissions,
+  # when the ListBucket statement is checked,
+  # then only the compliance and executive report buckets should be listable.
 
   assert {
     condition = length([
@@ -262,9 +261,9 @@ check "lambda_policy_allows_listing_report_buckets" {
 }
 
 check "lambda_policy_allows_describing_compliance_data_sources" {
-  # Given the compliance agent evaluates DynamoDB-backed controls,
-  # when Terraform evaluates the table-description permission,
-  # then Lambda may describe only the three security data source tables.
+  # Given the Lambda application IAM policy is configured with DynamoDB DescribeTable permissions,
+  # when the table-description statement is checked,
+  # then only the WAF events, correlation findings, and security incidents tables should be describable.
 
   assert {
     condition = length([
