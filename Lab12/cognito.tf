@@ -98,7 +98,6 @@ resource "aws_cognito_user_group" "asgard_user_group" {
   user_pool_id = aws_cognito_user_pool.asgard_pool.id
   description  = "Managed by Terraform"
   precedence   = 10
-  // role_arn     = aws_iam_role.group_role.arn
 }
 
 resource "aws_cognito_user_group" "asgard_admin_group" {
@@ -106,7 +105,6 @@ resource "aws_cognito_user_group" "asgard_admin_group" {
   user_pool_id = aws_cognito_user_pool.asgard_pool.id
   description  = "Managed by Terraform"
   precedence   = 1
-  // role_arn     = aws_iam_role.group_role.arn
 }
 
 resource "aws_cognito_user" "odin" {

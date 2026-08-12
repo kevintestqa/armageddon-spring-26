@@ -91,3 +91,18 @@ variable "compliance_report_bucket_name" {
     error_message = "Compliance report bucket name must be 'asgard-compliance-report'"
   }
 }
+
+variable "enable_bedrock" {
+  type    = bool
+  default = true
+}
+
+variable "bedrock_model_id" {
+  type    = string
+  default = "us.anthropic.claude-sonnet-4-6"
+
+  validation {
+    condition     = var.bedrock_model_id == "us.anthropic.claude-sonnet-4-6"
+    error_message = "Bedrock model ID must be 'us.anthropic.claude-sonnet-4-6'"
+  }
+}
