@@ -1,4 +1,5 @@
-# This workflow is a work in progress and is not yet fully functional. It is intended to run pre-flight checks on the repository to ensure that the code is in a good state before merging.
+# This workflow is a work in progress and is not yet fully functional. 
+# It is intended to run pre-flight checks on the repository to ensure that the code is in a good state before merging.
 
 name: Terraform Tests
 
