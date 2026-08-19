@@ -42,5 +42,15 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Isolate Terraform Checks
+        run: |
+          mkdir -p /tmp/terraform-checks
+          mv *-check.tf /tmp/terraform-checks/
+
       - name: Terraform Test
         run: terraform test -filter=tests/validations.tftest.hcl
+
+      - name: Restore Terraform Checks
+        if: always()
+        run: |
+          mv /tmp/terraform-checks/*-check.tf .
