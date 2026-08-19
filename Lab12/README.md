@@ -6,8 +6,6 @@ The Asgard Cloud Security SOAR Platform is an AWS-based Security Orchestration, 
 
 The platform uses an event-driven architecture built with AWS managed services and Infrastructure as Code (Terraform). It demonstrates how cloud-native services can work together to detect security events, correlate findings, generate incidents, notify responders, and produce executive-level security reports.
 
-This project was completed as part of my AWS Cloud Computing coursework and showcases practical experience with AWS architecture, Terraform, serverless development, cloud security, and automation.
-
 ---
 
 # Architecture
@@ -156,7 +154,7 @@ Reports are automatically uploaded to Amazon S3.
 
 # Terraform Validation
 
-This project makes extensive use of Terraform `check` blocks to validate infrastructure before deployment.
+This project makes extensive use of Terraform `check` blocks to validate infrastructure after deployment.
 
 Examples include:
 
@@ -169,7 +167,7 @@ Examples include:
 - S3 permissions
 - WAF configuration
 
-These checks help identify configuration issues before infrastructure is deployed.
+These checks help identify configuration issues after infrastructure is deployed.
 
 ---
 
@@ -202,7 +200,6 @@ This was a good reminder that native Python libraries must be built for the same
 
 - AWS Architecture
 - Terraform
-- Infrastructure as Code
 - Python
 - AWS Lambda
 - Amazon EventBridge
@@ -216,23 +213,10 @@ This was a good reminder that native Python libraries must be built for the same
 - Cloud Security
 - Event-Driven Architecture
 - Serverless Development
-- Docker
 - Troubleshooting Native Python Dependencies
 
 ---
 
-# Future Improvements
-
-Some ideas I'd like to add in the future include:
-
-- AI-generated remediation recommendations
-- Historical security trend reporting
-- Executive dashboard web application
-- Multi-account AWS support
-- Interactive security analytics
-- Additional automation playbooks
-
----
 
 # Lessons Learned
 
@@ -243,7 +227,6 @@ This project helped reinforce several cloud engineering concepts:
 - Applying least-privilege IAM principles
 - Validating infrastructure with Terraform checks
 - Packaging native Python dependencies for AWS Lambda
-- Using Docker to build Linux-compatible deployment artifacts
 - Troubleshooting infrastructure through incremental testing and verification
 
 ---

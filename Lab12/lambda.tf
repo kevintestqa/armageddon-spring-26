@@ -21,14 +21,19 @@ resource "aws_lambda_function" "asgard_lambda_function" {
       WAF_EVENTS_TABLE           = aws_dynamodb_table.asgard_waf_events.name
       SNS_TOPIC_ARN              = aws_sns_topic.asgard_critical_alerts_topic.arn
 
-      BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
-      ENABLE_BEDROCK   = "true"
+      BEDROCK_MODEL_ID = var.bedrock_model_id
+      ENABLE_BEDROCK   = tostring(var.enable_bedrock)
     }
   }
   lifecycle {
     precondition {
       condition     = var.lambda_python_runtime == "python3.14"
       error_message = "Runtime must be python3.14"
+    }
+
+    precondition {
+      condition     = var.enable_bedrock == true
+      error_message = "Bedrock must be enabled for this Lambda function."
     }
   }
 }
@@ -49,7 +54,7 @@ resource "aws_lambda_function" "waf_bedrock_analyzer" {
       LOG_LEVEL        = "info"
       WAF_LOG_GROUP    = aws_cloudwatch_log_group.asgard_waf_logs.name
       DYNAMODB_TABLE   = aws_dynamodb_table.asgard_waf_events.name
-      BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
+      BEDROCK_MODEL_ID = var.bedrock_model_id
     }
   }
   lifecycle {
@@ -156,8 +161,8 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
       REPORT_BUCKET = aws_s3_bucket.asgard_executive_report.bucket
       REPORT_PREFIX = "executive-reports"
 
-      BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
-      ENABLE_BEDROCK   = "true"
+      BEDROCK_MODEL_ID = var.bedrock_model_id
+      ENABLE_BEDROCK   = tostring(var.enable_bedrock)
 
       REPORT_PERIOD_HOURS = "24"
       MAX_ITEMS_PER_TABLE = "5000"
@@ -176,6 +181,16 @@ resource "aws_lambda_function" "executive_dashboard_agent" {
     precondition {
       condition     = var.lambda_python_runtime == "python3.14"
       error_message = "Runtime must be python3.14"
+    }
+
+    precondition {
+      condition     = var.enable_bedrock == true
+      error_message = "Bedrock must be enabled for this Lambda function."
+    }
+
+    precondition {
+      condition     = var.bedrock_model_id == "us.anthropic.claude-sonnet-4-6"
+      error_message = "Bedrock model ID must be 'us.anthropic.claude-sonnet-4-6'"
     }
   }
 }
@@ -213,8 +228,8 @@ resource "aws_lambda_function" "compliance_agent" {
 
       COMPLIANCE_FRAMEWORKS = "NIST CSF 2.0"
 
-      BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-6"
-      ENABLE_BEDROCK   = "true"
+      BEDROCK_MODEL_ID = var.bedrock_model_id
+      ENABLE_BEDROCK   = tostring(var.enable_bedrock)
 
       ORGANIZATION_NAME  = "Asgard Cloud Security"
       REPORT_TITLE       = "Compliance Evidence Report"
@@ -230,6 +245,16 @@ resource "aws_lambda_function" "compliance_agent" {
     precondition {
       condition     = var.lambda_python_runtime == "python3.14"
       error_message = "Runtime must be python3.14"
+    }
+
+    precondition {
+      condition     = var.enable_bedrock == true
+      error_message = "Bedrock must be enabled for this Lambda function."
+    }
+
+    precondition {
+      condition     = var.bedrock_model_id == "us.anthropic.claude-sonnet-4-6"
+      error_message = "Bedrock model ID must be 'us.anthropic.claude-sonnet-4-6'"
     }
   }
 }
