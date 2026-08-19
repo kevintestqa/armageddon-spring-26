@@ -135,17 +135,17 @@ run "valid_dynamodb_table_encryption" {
   command = plan
 
   assert {
-    condition     = aws_dynamodb_table.asgard_waf_events.server_side_encryption.enabled == true
+    condition     = one(aws_dynamodb_table.asgard_waf_events.server_side_encryption).enabled == true
     error_message = "DynamoDB table asgard_waf_events must have server-side encryption enabled"
   }
 
   assert {
-    condition     = aws_dynamodb_table.asgard_compliance_findings.server_side_encryption.enabled == true
+    condition     = one(aws_dynamodb_table.asgard_compliance_findings.server_side_encryption).enabled == true
     error_message = "DynamoDB table asgard_compliance_findings must have server-side encryption enabled"
   }
 
   assert {
-    condition     = aws_dynamodb_table.asgard_compliance_evidence.server_side_encryption.enabled == true
+    condition     = one(aws_dynamodb_table.asgard_compliance_evidence.server_side_encryption).enabled == true
     error_message = "DynamoDB table asgard_compliance_evidence must have server-side encryption enabled"
   }
 }

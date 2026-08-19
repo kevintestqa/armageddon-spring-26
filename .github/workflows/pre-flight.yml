@@ -42,6 +42,12 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      # The root-level *-check.tf files validate relationships that may depend on AWS values
+      # that are only known AFTER apply (for example, generated API Gateway IDs). During
+      # terraform test, those checks are still loaded with the root module and can cause
+      # plan-time tests to fail even when the tests themselves are valid. We temporarily
+      # move the check files out of the module so validations.tftest.hcl can run as an
+      # isolated pre-flight test suite, then restore the checks afterward for local/apply use.
       - name: Isolate Terraform Checks
         run: |
           mkdir -p /tmp/terraform-checks
@@ -50,6 +56,9 @@ jobs:
       - name: Terraform Test
         run: terraform test -filter=tests/validations.tftest.hcl
 
+      # if: always() is a GitHub Actions conditional. It tells this restore step to run
+      # even if the Terraform Test step fails, so the temporarily moved *-check.tf files
+      # are put back before the job finishes.
       - name: Restore Terraform Checks
         if: always()
         run: |
