@@ -106,3 +106,53 @@ variable "bedrock_model_id" {
     error_message = "Bedrock model ID must be 'us.anthropic.claude-sonnet-4-6'"
   }
 }
+
+variable "environment" {
+  type    = string
+  default = "dev"
+
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment must be one of: dev, staging, prod"
+  }
+}
+
+variable "cost_center" {
+  type    = string
+  default = "asgard-cc"
+
+  validation {
+    condition     = var.cost_center == "asgard-cc"
+    error_message = "Cost center must be 'asgard-cc'"
+  }
+}
+
+variable "budget_limit" {
+  type    = number
+  default = 1000
+
+  validation {
+    condition     = var.budget_limit > 0
+    error_message = "Budget limit must be a positive number"
+  }
+}
+
+variable "budget_start_date" {
+  type    = string
+  default = "2026-01-01"
+
+  validation {
+    condition     = can(regex("^\\d{4}-\\d{2}-\\d{2}$", var.budget_start_date))
+    error_message = "Budget start date must be in the format YYYY-MM-DD"
+  }
+}
+
+variable "anomaly_threshold_absolute" {
+  type    = number
+  default = 100
+
+  validation {
+    condition     = var.anomaly_threshold_absolute > 0
+    error_message = "Anomaly threshold (absolute) must be a positive number"
+  }
+}

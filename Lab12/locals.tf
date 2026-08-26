@@ -12,4 +12,10 @@ locals {
   all_protocol   = "All"
   http           = "http"
   https          = "https"
+
+  common_tags = {
+    Project     = var.project_name
+    Environment = var.environment
+    CostCenter  = var.cost_center
+  }
 }
