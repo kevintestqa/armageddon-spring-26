@@ -18,7 +18,10 @@ resource "aws_s3_bucket" "asgard_threat_evidence" {
   force_destroy       = false
 
   tags = merge(local.common_tags, {
-    Name               = "Asgard Threat Evidence Archive"
+    Name = "Asgard Threat Evidence Archive"
+    # Override the legacy lowercase common tag to preserve the project's
+    # approved cost-allocation value exactly.
+    Project            = "Asgard"
     Purpose            = "SecurityAuditEvidence"
     DataClassification = "SecuritySensitive"
   })

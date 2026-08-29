@@ -12,6 +12,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import BotoCoreError, ClientError
 from threat_evidence import (
+    archive_threat_evidence,
     normalize_finding_item_to_threat_evidence,
 )
 
@@ -23,6 +24,7 @@ from threat_evidence import (
 bedrock_client = boto3.client("bedrock-runtime")
 dynamodb = boto3.resource("dynamodb")
 eventbridge_client = boto3.client("events")
+s3_client = boto3.client("s3")
 
 
 # ============================================================
@@ -56,6 +58,11 @@ MINIMUM_EVENT_COUNT = int(
 
 MAX_EVENTS = int(
     os.environ.get("MAX_EVENTS", "500")
+)
+
+THREAT_EVIDENCE_BUCKET = os.environ.get(
+    "THREAT_EVIDENCE_BUCKET",
+    "",
 )
 
 ADMIN_URI_KEYWORDS = [
@@ -746,6 +753,49 @@ def save_finding(
     return item
 
 
+def archive_finding_as_threat_evidence(
+    finding: dict[str, Any],
+) -> str | None:
+    """Normalize and archive a finding without failing correlation."""
+
+    if not THREAT_EVIDENCE_BUCKET:
+        print(
+            "Threat evidence archival skipped because "
+            "THREAT_EVIDENCE_BUCKET is not configured."
+        )
+        return None
+
+    try:
+        threat_evidence = (
+            normalize_finding_item_to_threat_evidence(
+                finding,
+                aws_region=os.environ.get("AWS_REGION"),
+            )
+        )
+
+        object_key = archive_threat_evidence(
+            s3_client=s3_client,
+            bucket_name=THREAT_EVIDENCE_BUCKET,
+            evidence=threat_evidence,
+        )
+
+        print(
+            "Archived normalized threat evidence at "
+            f"s3://{THREAT_EVIDENCE_BUCKET}/{object_key}."
+        )
+
+        return object_key
+    except Exception as error:
+        # Archival is additive observability. A transient S3 or normalization
+        # failure must not erase the correlation finding already saved in
+        # DynamoDB or prevent the incident workflow from continuing.
+        print(
+            "Threat evidence archival failed: "
+            f"{type(error).__name__}: {error}"
+        )
+        return None
+
+
 def save_security_incident(
     finding_id: str,
     evidence_package: dict[str, Any],
@@ -913,21 +963,9 @@ def lambda_handler(
 
         finding_id = finding["finding_id"]
 
-        threat_evidence = (
-            normalize_finding_item_to_threat_evidence(
-                finding,
-                aws_region=os.environ.get("AWS_REGION"),
-            )
+        evidence_archive_key = (
+            archive_finding_as_threat_evidence(finding)
         )
-
-        print("\n===== NORMALIZED THREAT EVIDENCE =====")
-        print(
-            json.dumps(
-                threat_evidence,
-                indent=2,
-            )
-        )
-        print("======================================\n")
 
         incident_id = save_security_incident(
             finding_id=finding_id,
@@ -955,6 +993,7 @@ def lambda_handler(
             "severity": severity,
             "risk_score": risk_score,
             "primary_source_ip": primary_source_ip,
+            "evidence_archive_key": evidence_archive_key,
         }
 
         print("Correlation result:")

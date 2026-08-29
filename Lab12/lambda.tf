@@ -1,5 +1,12 @@
-data "archive_file" "asgard_lambda_function" {
-  type        = "zip"
+// Preserve the deployed Lambda while adopting the clearer Terraform address.
+// Without this declaration, Terraform may plan a destroy/create replacement.
+moved {
+  from = aws_lambda_function.asgard_lambda_function
+  to   = aws_lambda_function.asgard_response_agent_function
+}
+
+data "archive_file" "asgard_response_agent_function" {
+  type = "zip"
   # source_file = "${path.module}/Lambda_Src/response_agent_package/response_agent.py"
   output_path = "${path.module}/Lambda_Src/response_agent.zip"
   source_dir  = "${path.module}/Lambda_Src/response_agent_package"
@@ -7,12 +14,12 @@ data "archive_file" "asgard_lambda_function" {
 }
 
 # Lambda function
-resource "aws_lambda_function" "asgard_lambda_function" {
-  filename      = data.archive_file.asgard_lambda_function.output_path
+resource "aws_lambda_function" "asgard_response_agent_function" {
+  filename      = data.archive_file.asgard_response_agent_function.output_path
   function_name = "asgard_response_agent"
   role          = aws_iam_role.asgard_lambda_role.arn
   handler       = "response_agent.lambda_handler"
-  code_sha256   = data.archive_file.asgard_lambda_function.output_base64sha256
+  code_sha256   = data.archive_file.asgard_response_agent_function.output_base64sha256
   timeout       = 60
 
   runtime = var.lambda_python_runtime
@@ -23,6 +30,7 @@ resource "aws_lambda_function" "asgard_lambda_function" {
       SECURITY_INCIDENTS_TABLE   = aws_dynamodb_table.asgard_security_incidents.name
       WAF_EVENTS_TABLE           = aws_dynamodb_table.asgard_waf_events.name
       SNS_TOPIC_ARN              = aws_sns_topic.asgard_critical_alerts_topic.arn
+      THREAT_EVIDENCE_BUCKET     = aws_s3_bucket.asgard_threat_evidence.bucket
 
       BEDROCK_MODEL_ID = var.bedrock_model_id
       ENABLE_BEDROCK   = tostring(var.enable_bedrock)

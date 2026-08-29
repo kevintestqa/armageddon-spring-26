@@ -116,6 +116,19 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
         Resource = "${aws_s3_bucket.asgard_executive_report.arn}/executive-reports/*"
       },
       {
+        Sid    = "ArchiveThreatEvidence"
+        Effect = "Allow"
+
+        Action = [
+          "s3:PutObject"
+        ]
+
+        # Restrict the shared Lambda role to the archive's application prefix.
+        # Object Lock retention is inherited from the bucket configuration, so
+        # the runtime receives no permission to alter or bypass retention.
+        Resource = "${aws_s3_bucket.asgard_threat_evidence.arn}/threat-evidence/*"
+      },
+      {
         Sid    = "WriteComplianceRecords"
         Effect = "Allow"
 

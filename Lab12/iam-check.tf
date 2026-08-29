@@ -186,6 +186,29 @@ check "lambda_policy_limits_report_uploads_to_expected_prefix" {
   }
 }
 
+check "lambda_policy_limits_threat_evidence_archival" {
+  # Given the Response Agent archives normalized security evidence,
+  # when its S3 permission is evaluated,
+  # then it may only put objects beneath the immutable archive prefix.
+
+  assert {
+    condition = length([
+      for statement in local.asgard_lambda_app_policy.Statement : statement
+      if(
+        try(statement.Sid, "") == "ArchiveThreatEvidence"
+        && statement.Effect == "Allow"
+        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
+          "s3:PutObject"
+        ])
+        && try(statement.Resource, "") ==
+        "${aws_s3_bucket.asgard_threat_evidence.arn}/threat-evidence/*"
+      )
+    ]) == 1
+
+    error_message = "The Lambda policy must allow only s3:PutObject beneath the threat-evidence archive prefix."
+  }
+}
+
 check "lambda_policy_uses_expected_compliance_dynamodb_permissions" {
   # Given the Lambda application IAM policy is configured with compliance DynamoDB permissions,
   # when the compliance table statements are checked,

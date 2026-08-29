@@ -16,13 +16,13 @@ resource "aws_cloudwatch_event_rule" "asgard_medium_high_findings" {
 
 resource "aws_cloudwatch_event_target" "asgard_medium_high_findings_lambda" {
   rule = aws_cloudwatch_event_rule.asgard_medium_high_findings.name
-  arn  = aws_lambda_function.asgard_lambda_function.arn
+  arn  = aws_lambda_function.asgard_response_agent_function.arn
 }
 
 resource "aws_lambda_permission" "allow_eventbridge_asgard_medium_high_findings" {
   statement_id  = "AllowEventBridgeMediumHigh"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.asgard_lambda_function.function_name
+  function_name = aws_lambda_function.asgard_response_agent_function.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.asgard_medium_high_findings.arn
 }
@@ -42,14 +42,14 @@ resource "aws_cloudwatch_event_rule" "asgard_critical_findings" {
 resource "aws_lambda_permission" "allow_eventbridge_asgard_critical_findings" {
   statement_id  = "AllowEventBridgeCritical"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.asgard_lambda_function.function_name
+  function_name = aws_lambda_function.asgard_response_agent_function.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.asgard_critical_findings.arn
 }
 
 resource "aws_cloudwatch_event_target" "critical_asgard_lambda" {
   rule = aws_cloudwatch_event_rule.asgard_critical_findings.name
-  arn  = aws_lambda_function.asgard_lambda_function.arn
+  arn  = aws_lambda_function.asgard_response_agent_function.arn
 }
 
 resource "aws_cloudwatch_event_target" "critical_sns" {

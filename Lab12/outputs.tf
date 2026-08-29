@@ -5,7 +5,7 @@ output "api_gateway_invoke_url" {
 
 output "response_agent_lambda" {
   description = "Response Agent Lambda function."
-  value       = aws_lambda_function.asgard_lambda_function.function_name
+  value       = aws_lambda_function.asgard_response_agent_function.function_name
 }
 
 output "executive_dashboard_lambda" {

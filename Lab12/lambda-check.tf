@@ -7,11 +7,11 @@ check "lambda_uses_expected_deployment_package" {
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.filename ==
-      data.archive_file.asgard_lambda_function.output_path
+      aws_lambda_function.asgard_response_agent_function.filename ==
+      data.archive_file.asgard_response_agent_function.output_path
       &&
-      aws_lambda_function.asgard_lambda_function.code_sha256 ==
-      data.archive_file.asgard_lambda_function.output_base64sha256
+      aws_lambda_function.asgard_response_agent_function.code_sha256 ==
+      data.archive_file.asgard_response_agent_function.output_base64sha256
     )
 
     error_message = "The Asgard Lambda function must use the generated response agent archive and its matching source hash."
@@ -25,7 +25,7 @@ check "lambda_uses_expected_execution_role" {
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.role ==
+      aws_lambda_function.asgard_response_agent_function.role ==
       aws_iam_role.asgard_lambda_role.arn
     )
 
@@ -40,9 +40,9 @@ check "lambda_uses_expected_runtime_and_handler" {
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.runtime == "python3.14"
+      aws_lambda_function.asgard_response_agent_function.runtime == "python3.14"
       &&
-      aws_lambda_function.asgard_lambda_function.handler ==
+      aws_lambda_function.asgard_response_agent_function.handler ==
       "response_agent.lambda_handler"
     )
 
@@ -57,22 +57,25 @@ check "lambda_environment_variables_reference_expected_resources" {
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["CORRELATION_FINDINGS_TABLE"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["CORRELATION_FINDINGS_TABLE"] ==
       aws_dynamodb_table.asgard_waf_correlation_findings.name
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["SECURITY_INCIDENTS_TABLE"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["SECURITY_INCIDENTS_TABLE"] ==
       aws_dynamodb_table.asgard_security_incidents.name
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["WAF_EVENTS_TABLE"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["WAF_EVENTS_TABLE"] ==
       aws_dynamodb_table.asgard_waf_events.name
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["SNS_TOPIC_ARN"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["SNS_TOPIC_ARN"] ==
       aws_sns_topic.asgard_critical_alerts_topic.arn
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["BEDROCK_MODEL_ID"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["THREAT_EVIDENCE_BUCKET"] ==
+      aws_s3_bucket.asgard_threat_evidence.bucket
+      &&
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["BEDROCK_MODEL_ID"] ==
       "us.anthropic.claude-sonnet-4-6"
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["ENABLE_BEDROCK"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["ENABLE_BEDROCK"] ==
       "true"
     )
 
@@ -176,18 +179,19 @@ check "lambda_uses_only_expected_environment_variables" {
   assert {
     condition = toset(
       keys(
-        aws_lambda_function.asgard_lambda_function.environment[0].variables
+        aws_lambda_function.asgard_response_agent_function.environment[0].variables
       )
       ) == toset([
         "CORRELATION_FINDINGS_TABLE",
         "SECURITY_INCIDENTS_TABLE",
         "WAF_EVENTS_TABLE",
         "SNS_TOPIC_ARN",
+        "THREAT_EVIDENCE_BUCKET",
         "BEDROCK_MODEL_ID",
         "ENABLE_BEDROCK"
     ])
 
-    error_message = "The Asgard Lambda function must contain only the required DynamoDB, SNS, and Bedrock environment variables."
+    error_message = "The Asgard Lambda function must contain only the required DynamoDB, SNS, threat-evidence archive, and Bedrock environment variables."
   }
 }
 

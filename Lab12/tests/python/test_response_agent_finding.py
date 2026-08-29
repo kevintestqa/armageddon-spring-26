@@ -14,6 +14,7 @@ os.environ.setdefault("AWS_EC2_METADATA_DISABLED", "true")
 os.environ.setdefault("SECURITY_INCIDENTS_TABLE", "test-security-incidents")
 os.environ.setdefault("CORRELATION_FINDINGS_TABLE", "test-correlation-findings")
 os.environ.setdefault("WAF_EVENTS_TABLE", "test-waf-events")
+os.environ.setdefault("THREAT_EVIDENCE_BUCKET", "test-evidence-archive")
 
 LAMBDA_SOURCE = (
     Path(__file__).resolve().parents[2]
@@ -71,6 +72,56 @@ def build_evidence_package() -> dict:
 
 
 class BuildFindingItemTests(unittest.TestCase):
+    def test_archives_normalized_finding_and_returns_object_key(self) -> None:
+        finding = build_finding_item(
+            finding_id="finding-archive",
+            created_at="2026-08-28T02:01:00+00:00",
+            evidence_package=build_evidence_package(),
+            bedrock_report="Correlation report.",
+        )
+
+        with patch.object(
+            response_agent,
+            "archive_threat_evidence",
+            return_value="threat-evidence/year=2026/finding-archive.json",
+        ) as archive:
+            object_key = (
+                response_agent.archive_finding_as_threat_evidence(finding)
+            )
+
+        self.assertEqual(
+            object_key,
+            "threat-evidence/year=2026/finding-archive.json",
+        )
+        archived_evidence = archive.call_args.kwargs["evidence"]
+        self.assertEqual(
+            archived_evidence["identity"]["evidence_id"],
+            finding["finding_id"],
+        )
+        self.assertEqual(
+            archive.call_args.kwargs["bucket_name"],
+            "test-evidence-archive",
+        )
+
+    def test_archive_failure_does_not_escape_response_agent(self) -> None:
+        finding = build_finding_item(
+            finding_id="finding-archive-error",
+            created_at="2026-08-28T02:01:00+00:00",
+            evidence_package=build_evidence_package(),
+            bedrock_report="Correlation report.",
+        )
+
+        with patch.object(
+            response_agent,
+            "archive_threat_evidence",
+            side_effect=RuntimeError("S3 unavailable"),
+        ):
+            object_key = (
+                response_agent.archive_finding_as_threat_evidence(finding)
+            )
+
+        self.assertIsNone(object_key)
+
     def test_save_finding_writes_and_returns_same_item(self) -> None:
         evidence_package = build_evidence_package()
 
