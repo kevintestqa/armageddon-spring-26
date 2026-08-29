@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import uuid
@@ -670,14 +672,13 @@ def determine_overall_risk(
     )
 
 
-def save_finding(
+def build_finding_item(
+    finding_id: str,
+    created_at: str,
     evidence_package: dict[str, Any],
     bedrock_report: str,
-) -> str:
-    """Store the final correlation finding."""
-
-    finding_id = str(uuid.uuid4())
-    created_at = datetime.now(timezone.utc).isoformat()
+) -> dict[str, Any]:
+    """Build the DynamoDB finding without performing an AWS operation."""
 
     risk_score, severity, primary_source_ip = (
         determine_overall_risk(evidence_package)
@@ -694,7 +695,7 @@ def save_finding(
         else None
     )
 
-    item = {
+    return {
         "finding_id": finding_id,
         "created_at": created_at,
         "window_start": evidence_package[
@@ -715,11 +716,28 @@ def save_finding(
         "evidence": evidence_package,
     }
 
+
+def save_finding(
+    evidence_package: dict[str, Any],
+    bedrock_report: str,
+) -> str:
+    """Store the final correlation finding."""
+
+    finding_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    item = build_finding_item(
+        finding_id=finding_id,
+        created_at=created_at,
+        evidence_package=evidence_package,
+        bedrock_report=bedrock_report,
+    )
+
     findings_table.put_item(Item=item)
 
     print(
         f"Saved correlation finding {finding_id} "
-        f"with severity {severity}."
+        f"with severity {item['severity']}."
     )
 
     return finding_id
