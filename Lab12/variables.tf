@@ -92,6 +92,34 @@ variable "compliance_report_bucket_name" {
   }
 }
 
+variable "threat_evidence_bucket_prefix" {
+  description = "Globally unique bucket-name prefix for immutable threat evidence."
+  type        = string
+  default     = "asgard-threat-evidence-"
+
+  validation {
+    condition = (
+      startswith(var.threat_evidence_bucket_prefix, "asgard-") &&
+      endswith(var.threat_evidence_bucket_prefix, "-")
+    )
+    error_message = "Threat evidence bucket prefix must start with 'asgard-' and end with '-'."
+  }
+}
+
+variable "threat_evidence_retention_days" {
+  description = "Default S3 Object Lock governance retention period."
+  type        = number
+  default     = 365
+
+  validation {
+    condition = (
+      var.threat_evidence_retention_days >= 1 &&
+      var.threat_evidence_retention_days <= 3650
+    )
+    error_message = "Threat evidence retention must be between 1 and 3650 days."
+  }
+}
+
 variable "enable_bedrock" {
   type    = bool
   default = true
