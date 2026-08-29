@@ -11,6 +11,9 @@ from typing import Any
 import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import BotoCoreError, ClientError
+from threat_evidence import (
+    normalize_finding_item_to_threat_evidence,
+)
 
 
 # ============================================================
@@ -720,7 +723,7 @@ def build_finding_item(
 def save_finding(
     evidence_package: dict[str, Any],
     bedrock_report: str,
-) -> str:
+) -> dict[str, Any]:
     """Store the final correlation finding."""
 
     finding_id = str(uuid.uuid4())
@@ -740,7 +743,7 @@ def save_finding(
         f"with severity {item['severity']}."
     )
 
-    return finding_id
+    return item
 
 
 def save_security_incident(
@@ -903,10 +906,28 @@ def lambda_handler(
         print(bedrock_report)
         print("=================================\n")
 
-        finding_id = save_finding(
+        finding = save_finding(
             evidence_package=evidence_package,
             bedrock_report=bedrock_report,
         )
+
+        finding_id = finding["finding_id"]
+
+        threat_evidence = (
+            normalize_finding_item_to_threat_evidence(
+                finding,
+                aws_region=os.environ.get("AWS_REGION"),
+            )
+        )
+
+        print("\n===== NORMALIZED THREAT EVIDENCE =====")
+        print(
+            json.dumps(
+                threat_evidence,
+                indent=2,
+            )
+        )
+        print("======================================\n")
 
         incident_id = save_security_incident(
             finding_id=finding_id,

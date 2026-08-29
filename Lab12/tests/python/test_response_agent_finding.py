@@ -6,6 +6,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-west-1")
@@ -22,6 +23,7 @@ LAMBDA_SOURCE = (
 
 sys.path.insert(0, str(LAMBDA_SOURCE))
 
+import response_agent
 from response_agent import build_finding_item
 from threat_evidence import normalize_finding_item_to_threat_evidence
 
@@ -69,6 +71,22 @@ def build_evidence_package() -> dict:
 
 
 class BuildFindingItemTests(unittest.TestCase):
+    def test_save_finding_writes_and_returns_same_item(self) -> None:
+        evidence_package = build_evidence_package()
+
+        with patch.object(
+            response_agent.findings_table,
+            "put_item",
+        ) as put_item:
+            finding = response_agent.save_finding(
+                evidence_package=evidence_package,
+                bedrock_report="Correlation report.",
+            )
+
+        put_item.assert_called_once_with(Item=finding)
+        self.assertEqual(finding["evidence"], evidence_package)
+        self.assertEqual(finding["bedrock_report"], "Correlation report.")
+
     def test_builds_existing_dynamodb_item_shape(self) -> None:
         evidence_package = build_evidence_package()
 
