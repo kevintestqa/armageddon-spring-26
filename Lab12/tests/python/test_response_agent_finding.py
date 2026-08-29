@@ -14,7 +14,12 @@ os.environ.setdefault("SECURITY_INCIDENTS_TABLE", "test-security-incidents")
 os.environ.setdefault("CORRELATION_FINDINGS_TABLE", "test-correlation-findings")
 os.environ.setdefault("WAF_EVENTS_TABLE", "test-waf-events")
 
-LAMBDA_SOURCE = Path(__file__).resolve().parents[2] / "Lambda_Src"
+LAMBDA_SOURCE = (
+    Path(__file__).resolve().parents[2]
+    / "Lambda_Src"
+    / "response_agent_package"
+)
+
 sys.path.insert(0, str(LAMBDA_SOURCE))
 
 from response_agent import build_finding_item

@@ -1,8 +1,11 @@
 data "archive_file" "asgard_lambda_function" {
   type        = "zip"
-  source_file = "${path.module}/Lambda_Src/response_agent.py"
+  # source_file = "${path.module}/Lambda_Src/response_agent_package/response_agent.py"
   output_path = "${path.module}/Lambda_Src/response_agent.zip"
+  source_dir  = "${path.module}/Lambda_Src/response_agent_package"
+
 }
+
 # Lambda function
 resource "aws_lambda_function" "asgard_lambda_function" {
   filename      = data.archive_file.asgard_lambda_function.output_path

@@ -9,7 +9,12 @@ from decimal import Decimal
 from pathlib import Path
 
 
-LAMBDA_SOURCE = Path(__file__).resolve().parents[2] / "Lambda_Src"
+LAMBDA_SOURCE = (
+    Path(__file__).resolve().parents[2]
+    / "Lambda_Src"
+    / "response_agent_package"
+)
+
 sys.path.insert(0, str(LAMBDA_SOURCE))
 
 from threat_evidence import (
