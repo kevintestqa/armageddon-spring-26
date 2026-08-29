@@ -21,15 +21,15 @@ check "lambda_uses_expected_deployment_package" {
 check "lambda_uses_expected_execution_role" {
   # Given the Asgard Lambda is configured with an execution role,
   # when the role assignment is checked,
-  # then the function should use the Asgard Lambda role.
+  # then the function should use its dedicated Response Agent role.
 
   assert {
     condition = (
       aws_lambda_function.asgard_response_agent_function.role ==
-      aws_iam_role.asgard_lambda_role.arn
+      aws_iam_role.asgard_response_agent.arn
     )
 
-    error_message = "The Asgard Lambda function must use the Asgard Lambda execution role."
+    error_message = "The Response Agent must use its dedicated execution role."
   }
 }
 
@@ -53,7 +53,7 @@ check "lambda_uses_expected_runtime_and_handler" {
 check "lambda_environment_variables_reference_expected_resources" {
   # Given the Asgard Lambda is configured with environment variables,
   # when the environment variable values are checked,
-  # then they should reference the expected tables, SNS topic, and Bedrock configuration.
+  # then they should reference the expected tables, archive, and Bedrock configuration.
 
   assert {
     condition = (
@@ -66,9 +66,6 @@ check "lambda_environment_variables_reference_expected_resources" {
       aws_lambda_function.asgard_response_agent_function.environment[0].variables["WAF_EVENTS_TABLE"] ==
       aws_dynamodb_table.asgard_waf_events.name
       &&
-      aws_lambda_function.asgard_response_agent_function.environment[0].variables["SNS_TOPIC_ARN"] ==
-      aws_sns_topic.asgard_critical_alerts_topic.arn
-      &&
       aws_lambda_function.asgard_response_agent_function.environment[0].variables["THREAT_EVIDENCE_BUCKET"] ==
       aws_s3_bucket.asgard_threat_evidence.bucket
       &&
@@ -79,7 +76,7 @@ check "lambda_environment_variables_reference_expected_resources" {
       "true"
     )
 
-    error_message = "The Asgard Lambda environment variables must reference the expected tables, SNS topic, Bedrock model, and enablement value."
+    error_message = "The Response Agent environment must reference the expected tables, archive, Bedrock model, and enablement value."
   }
 }
 
@@ -185,13 +182,12 @@ check "lambda_uses_only_expected_environment_variables" {
         "CORRELATION_FINDINGS_TABLE",
         "SECURITY_INCIDENTS_TABLE",
         "WAF_EVENTS_TABLE",
-        "SNS_TOPIC_ARN",
         "THREAT_EVIDENCE_BUCKET",
         "BEDROCK_MODEL_ID",
         "ENABLE_BEDROCK"
     ])
 
-    error_message = "The Asgard Lambda function must contain only the required DynamoDB, SNS, threat-evidence archive, and Bedrock environment variables."
+    error_message = "The Response Agent must contain only the required DynamoDB, threat-evidence archive, and Bedrock environment variables."
   }
 }
 

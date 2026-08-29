@@ -167,11 +167,11 @@ variable "budget_limit" {
 
 variable "budget_start_date" {
   type    = string
-  default = "2026-01-01"
+  default = "2026-01-01_00:00"
 
   validation {
-    condition     = can(regex("^\\d{4}-\\d{2}-\\d{2}$", var.budget_start_date))
-    error_message = "Budget start date must be in the format YYYY-MM-DD"
+    condition     = can(regex("^\\d{4}-\\d{2}-\\d{2}_\\d{2}:\\d{2}$", var.budget_start_date))
+    error_message = "Budget start date must be in the format YYYY-MM-DD_HH:MM"
   }
 }
 

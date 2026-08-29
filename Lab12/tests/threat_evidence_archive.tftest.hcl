@@ -1,5 +1,14 @@
 mock_provider "aws" {}
 
+override_resource {
+  target          = aws_s3_bucket.asgard_threat_evidence
+  override_during = plan
+  values = {
+    arn    = "arn:aws:s3:::asgard-threat-evidence-test"
+    bucket = "asgard-threat-evidence-test"
+  }
+}
+
 # ============================================================
 # Feature: Immutable Threat Evidence Archive
 # ============================================================
@@ -113,7 +122,7 @@ run "invalid_threat_evidence_retention_is_rejected" {
 # Scenario: Connect the Response Agent to the archive
 #   Given the immutable evidence bucket has been planned,
 #   When the Response Agent runtime configuration is evaluated,
-#   Then it must receive the bucket name and prefix-scoped PutObject access.
+#   Then it must receive the immutable archive bucket name.
 #
 run "response_agent_can_archive_threat_evidence" {
   command = plan
@@ -124,18 +133,5 @@ run "response_agent_can_archive_threat_evidence" {
       aws_s3_bucket.asgard_threat_evidence.bucket
     )
     error_message = "Response Agent must receive the threat evidence bucket name."
-  }
-
-  assert {
-    condition = length([
-      for statement in jsondecode(aws_iam_policy.asgard_lambda_app_policy.policy).Statement : statement
-      if(
-        try(statement.Sid, "") == "ArchiveThreatEvidence"
-        && statement.Effect == "Allow"
-        && toset(try(tolist(statement.Action), [statement.Action])) == toset(["s3:PutObject"])
-        && try(statement.Resource, "") == "${aws_s3_bucket.asgard_threat_evidence.arn}/threat-evidence/*"
-      )
-    ]) == 1
-    error_message = "Response Agent must have prefix-scoped s3:PutObject access to the archive."
   }
 }

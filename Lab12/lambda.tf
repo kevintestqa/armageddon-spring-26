@@ -17,7 +17,7 @@ data "archive_file" "asgard_response_agent_function" {
 resource "aws_lambda_function" "asgard_response_agent_function" {
   filename      = data.archive_file.asgard_response_agent_function.output_path
   function_name = "asgard_response_agent"
-  role          = aws_iam_role.asgard_lambda_role.arn
+  role          = aws_iam_role.asgard_response_agent.arn
   handler       = "response_agent.lambda_handler"
   code_sha256   = data.archive_file.asgard_response_agent_function.output_base64sha256
   timeout       = 60
@@ -29,7 +29,6 @@ resource "aws_lambda_function" "asgard_response_agent_function" {
       CORRELATION_FINDINGS_TABLE = aws_dynamodb_table.asgard_waf_correlation_findings.name
       SECURITY_INCIDENTS_TABLE   = aws_dynamodb_table.asgard_security_incidents.name
       WAF_EVENTS_TABLE           = aws_dynamodb_table.asgard_waf_events.name
-      SNS_TOPIC_ARN              = aws_sns_topic.asgard_critical_alerts_topic.arn
       THREAT_EVIDENCE_BUCKET     = aws_s3_bucket.asgard_threat_evidence.bucket
 
       BEDROCK_MODEL_ID = var.bedrock_model_id

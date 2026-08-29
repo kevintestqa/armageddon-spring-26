@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import json
 import sys
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -225,6 +227,83 @@ class BuildFindingItemTests(unittest.TestCase):
             finding["bedrock_report"],
             threat_evidence["context"]["notes"],
         )
+
+
+class ResponseAgentHandlerAcceptanceTests(unittest.TestCase):
+    """Exercise the correlation-to-archive handler contract with mocked AWS."""
+
+    def _invoke_handler(self, archive_key: str | None) -> tuple[dict, object]:
+        evidence_package = build_evidence_package()
+        finding = build_finding_item(
+            finding_id="finding-handler",
+            created_at="2026-08-28T02:01:00+00:00",
+            evidence_package=evidence_package,
+            bedrock_report="Correlation report.",
+        )
+
+        with (
+            patch.object(
+                response_agent,
+                "get_recent_events",
+                return_value=(
+                    [{"event": 1}, {"event": 2}, {"event": 3}],
+                    datetime(2026, 8, 28, 1, tzinfo=timezone.utc),
+                    datetime(2026, 8, 28, 2, tzinfo=timezone.utc),
+                ),
+            ),
+            patch.object(
+                response_agent,
+                "build_evidence_package",
+                return_value=evidence_package,
+            ),
+            patch.object(
+                response_agent,
+                "call_bedrock",
+                return_value="Correlation report.",
+            ),
+            patch.object(
+                response_agent,
+                "save_finding",
+                return_value=finding,
+            ),
+            patch.object(
+                response_agent,
+                "archive_finding_as_threat_evidence",
+                return_value=archive_key,
+            ) as archive,
+            patch.object(
+                response_agent,
+                "save_security_incident",
+                return_value="incident-handler",
+            ),
+            patch.object(response_agent, "publish_finding_event"),
+        ):
+            response = response_agent.lambda_handler({}, None)
+
+        return response, archive
+
+    def test_handler_returns_archived_object_key(self) -> None:
+        expected_key = (
+            "threat-evidence/year=2026/month=08/day=28/"
+            "finding-handler.json"
+        )
+
+        response, archive = self._invoke_handler(expected_key)
+        body = json.loads(response["body"])
+
+        self.assertEqual(response["statusCode"], 200)
+        self.assertTrue(body["finding_created"])
+        self.assertEqual(body["evidence_archive_key"], expected_key)
+        archive.assert_called_once()
+
+    def test_handler_remains_successful_when_archival_fails(self) -> None:
+        response, archive = self._invoke_handler(None)
+        body = json.loads(response["body"])
+
+        self.assertEqual(response["statusCode"], 200)
+        self.assertTrue(body["finding_created"])
+        self.assertIsNone(body["evidence_archive_key"])
+        archive.assert_called_once()
 
 
 if __name__ == "__main__":
