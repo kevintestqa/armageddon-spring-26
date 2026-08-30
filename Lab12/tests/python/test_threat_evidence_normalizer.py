@@ -65,8 +65,8 @@ class ThreatEvidenceNormalizerTests(unittest.TestCase):
             build_evidence_package(),
             "Analyst interpretation.",
             aws_account_id="123456789012",
-            aws_region="us-west-1",
-            waf_web_acl_arn="arn:aws:wafv2:us-west-1:123456789012:regional/webacl/asgard/example",
+            aws_region="us-east-1",
+            waf_web_acl_arn="arn:aws:wafv2:us-east-1:123456789012:regional/webacl/asgard/example",
         )
 
         self.assertEqual(evidence["identity"]["evidence_id"], "finding-123")
@@ -75,7 +75,7 @@ class ThreatEvidenceNormalizerTests(unittest.TestCase):
         self.assertEqual(evidence["indicator"]["indicator_source"], "AWS_WAF")
         self.assertEqual(evidence["context"]["severity"], "HIGH")
         self.assertEqual(evidence["context"]["confidence"], "CORRELATED")
-        self.assertEqual(evidence["source"]["region"], "us-west-1")
+        self.assertEqual(evidence["source"]["region"], "us-east-1")
 
     def test_classifies_ipv6_indicator(self) -> None:
         evidence = normalize_finding_to_threat_evidence(

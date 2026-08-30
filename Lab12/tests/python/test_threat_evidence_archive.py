@@ -43,7 +43,7 @@ def build_threat_evidence() -> dict:
         },
         "source": {
             "account_id": "123456789012",
-            "region": "us-west-1",
+            "region": "us-east-1",
             "resource_id": None,
             "repository": None,
             "hostname": None,

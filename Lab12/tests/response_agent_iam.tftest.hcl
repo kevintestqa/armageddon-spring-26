@@ -15,7 +15,7 @@ override_resource {
   target          = aws_dynamodb_table.asgard_waf_events
   override_during = plan
   values = {
-    arn = "arn:aws:dynamodb:us-west-1:123456789012:table/asgard-waf-events"
+    arn = "arn:aws:dynamodb:us-east-1:123456789012:table/asgard-waf-events"
   }
 }
 
@@ -23,7 +23,7 @@ override_resource {
   target          = aws_dynamodb_table.asgard_waf_correlation_findings
   override_during = plan
   values = {
-    arn = "arn:aws:dynamodb:us-west-1:123456789012:table/waf-correlation-findings"
+    arn = "arn:aws:dynamodb:us-east-1:123456789012:table/waf-correlation-findings"
   }
 }
 
@@ -31,7 +31,7 @@ override_resource {
   target          = aws_dynamodb_table.asgard_security_incidents
   override_during = plan
   values = {
-    arn = "arn:aws:dynamodb:us-west-1:123456789012:table/security-incidents"
+    arn = "arn:aws:dynamodb:us-east-1:123456789012:table/security-incidents"
   }
 }
 
@@ -47,7 +47,7 @@ override_data {
   target          = data.aws_cloudwatch_event_bus.default
   override_during = plan
   values = {
-    arn = "arn:aws:events:us-west-1:123456789012:event-bus/default"
+    arn = "arn:aws:events:us-east-1:123456789012:event-bus/default"
   }
 }
 

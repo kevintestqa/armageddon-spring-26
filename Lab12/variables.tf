@@ -18,7 +18,7 @@ variable "private_subnet_cidrs" {
 variable "azs" {
   description = "Availability Zones list"
   type        = list(string)
-  default     = ["us-east-1a", "us-west-1a"]
+  default     = ["us-east-1a", "us-east-1b"]
 }
 
 variable "sns_email_endpoint" {

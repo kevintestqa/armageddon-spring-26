@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-os.environ.setdefault("AWS_DEFAULT_REGION", "us-west-1")
+os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 os.environ.setdefault("AWS_EC2_METADATA_DISABLED", "true")
 os.environ.setdefault("SECURITY_INCIDENTS_TABLE", "test-security-incidents")
 os.environ.setdefault("CORRELATION_FINDINGS_TABLE", "test-correlation-findings")
@@ -208,7 +208,7 @@ class BuildFindingItemTests(unittest.TestCase):
         threat_evidence = normalize_finding_item_to_threat_evidence(
             finding,
             aws_account_id="123456789012",
-            aws_region="us-west-1",
+            aws_region="us-east-1",
         )
 
         self.assertEqual(

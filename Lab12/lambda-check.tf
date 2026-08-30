@@ -171,7 +171,7 @@ check "waf_bedrock_lambda_timeout_is_60_seconds" {
 check "lambda_uses_only_expected_environment_variables" {
   # Given the Asgard Lambda is configured with environment variables,
   # when the environment variable names are checked,
-  # then only the six approved variables should be present.
+  # then only the eight approved variables should be present.
 
   assert {
     condition = toset(
@@ -183,6 +183,8 @@ check "lambda_uses_only_expected_environment_variables" {
         "SECURITY_INCIDENTS_TABLE",
         "WAF_EVENTS_TABLE",
         "THREAT_EVIDENCE_BUCKET",
+        "ENABLE_THREAT_ENRICHMENT",
+        "ABUSEIPDB_SECRET_ARN",
         "BEDROCK_MODEL_ID",
         "ENABLE_BEDROCK"
     ])

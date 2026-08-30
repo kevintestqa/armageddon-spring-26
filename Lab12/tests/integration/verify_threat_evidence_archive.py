@@ -24,7 +24,7 @@ def required_environment(name: str) -> str:
 def main() -> int:
     """Invoke the deployed agent and verify the resulting protected object."""
 
-    region = os.environ.get("AWS_REGION", "us-west-1")
+    region = os.environ.get("AWS_REGION", "us-east-1")
     function_name = required_environment("RESPONSE_AGENT_FUNCTION_NAME")
     bucket_name = required_environment("THREAT_EVIDENCE_BUCKET")
 

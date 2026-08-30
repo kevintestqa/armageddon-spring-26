@@ -232,7 +232,7 @@ run "project_cost_allocation_tag_is_active" {
 
   assert {
     condition = (
-      aws_ce_cost_allocation_tag.asgard_project.tag_key == "Project"
+      aws_ce_cost_allocation_tag.asgard_cost_allocation_tag.tag_key == "Project"
     )
 
     error_message = "The Project tag key must be activated for cost allocation."
@@ -240,7 +240,7 @@ run "project_cost_allocation_tag_is_active" {
 
   assert {
     condition = (
-      aws_ce_cost_allocation_tag.asgard_project.status == "Active"
+      aws_ce_cost_allocation_tag.asgard_cost_allocation_tag.status == "Active"
     )
 
     error_message = "The Project cost allocation tag must have Active status."
@@ -268,7 +268,7 @@ run "valid_budget_configuration" {
       &&
       aws_budgets_budget.asgard_budget.time_unit == "MONTHLY"
       &&
-      aws_budgets_budget.asgard_budget.limit_amount == var.budget_limit
+      tonumber(aws_budgets_budget.asgard_budget.limit_amount) == var.budget_limit
     )
 
     error_message = "AWS Budget must use the configured monthly cost limit."
@@ -277,13 +277,14 @@ run "valid_budget_configuration" {
 
 run "valid_cost_anomaly_monitor_configuration" {
   command = plan
+  variables { existing_service_monitor_arn = null }
 
   assert {
     condition = (
-      aws_ce_anomaly_monitor.asgard_service_anomaly_monitor.monitor_type ==
+      aws_ce_anomaly_monitor.asgard_service_anomaly_monitor[0].monitor_type ==
       "DIMENSIONAL"
       &&
-      aws_ce_anomaly_monitor.asgard_service_anomaly_monitor.monitor_dimension ==
+      aws_ce_anomaly_monitor.asgard_service_anomaly_monitor[0].monitor_dimension ==
       "SERVICE"
     )
 

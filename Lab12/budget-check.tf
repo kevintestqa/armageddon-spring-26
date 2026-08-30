@@ -13,7 +13,7 @@ check "asgard_budget_uses_expected_configuration" {
       && aws_budgets_budget.asgard_budget.budget_type == "COST"
       && aws_budgets_budget.asgard_budget.limit_unit == "USD"
       && aws_budgets_budget.asgard_budget.time_unit == "MONTHLY"
-      && aws_budgets_budget.asgard_budget.limit_amount == var.budget_limit
+      && tonumber(aws_budgets_budget.asgard_budget.limit_amount) == var.budget_limit
       && aws_budgets_budget.asgard_budget.time_period_start == var.budget_start_date
     )
 
@@ -34,9 +34,9 @@ check "asgard_budget_uses_expected_project_tag_filter" {
       &&
       one(
         aws_budgets_budget.asgard_budget.cost_filter
-      ).values == [
-        "Project${"$"}${var.project_name}"
-      ]
+        ).values == tolist([
+          "Project${"$"}${local.common_tags.Project}"
+      ])
     )
 
     error_message = "The Asgard budget must filter costs using the Project tag and the configured project name."

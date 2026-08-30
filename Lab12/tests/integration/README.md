@@ -9,7 +9,7 @@ real correlation finding and requires recent WAF events in the deployed table.
 Run it after `terraform apply` with AWS credentials for the target account:
 
 ```bash
-export AWS_REGION="us-west-1"
+export AWS_REGION="us-east-1"
 export RESPONSE_AGENT_FUNCTION_NAME="$(terraform output -raw response_agent_lambda)"
 export THREAT_EVIDENCE_BUCKET="$(terraform output -raw threat_evidence_bucket_name)"
 

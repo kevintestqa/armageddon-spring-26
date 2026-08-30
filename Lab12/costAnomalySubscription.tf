@@ -3,7 +3,7 @@ resource "aws_ce_anomaly_subscription" "asgard_anomaly_subscription" {
   frequency = "DAILY"
 
   monitor_arn_list = [
-    aws_ce_anomaly_monitor.asgard_service_anomaly_monitor.arn
+    local.service_monitor_arn
   ]
 
   subscriber {

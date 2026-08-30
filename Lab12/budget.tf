@@ -7,7 +7,7 @@ resource "aws_budgets_budget" "asgard_budget" {
 
   cost_filter {
     name   = "TagKeyValue"
-    values = ["Project${"$"}${var.project_name}"]
+    values = ["Project${"$"}${local.common_tags.Project}"]
   }
 
   cost_types {

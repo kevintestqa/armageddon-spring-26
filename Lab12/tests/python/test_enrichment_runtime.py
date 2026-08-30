@@ -26,7 +26,10 @@ class EnrichmentRuntimeTests(unittest.TestCase):
         self.evidence = response_agent.normalize_finding_item_to_threat_evidence(self.finding)
 
     def test_disabled_and_low_budget_make_no_calls(self):
-        """Given disabled or low time, when invoked, then no AWS call occurs."""
+        # Given Asgard threat enrichment is disabled or the Lambda has only ten seconds remaining,
+        # when enrich_for_archive checks whether enrichment can proceed,
+        # then it should return SKIPPED without creating an AWS client.
+
         with patch.object(runtime.boto3, "client") as client:
             with patch.dict(os.environ, {"ENABLE_THREAT_ENRICHMENT": "false"}):
                 self.assertEqual(runtime.enrich_for_archive(self.evidence, self.finding)["status"], "SKIPPED")
@@ -36,7 +39,10 @@ class EnrichmentRuntimeTests(unittest.TestCase):
             client.assert_not_called()
 
     def test_secret_used_only_for_provider_and_results_archived(self):
-        """Given a secret, when the archive runs, then it stores intelligence, never the key."""
+        # Given Asgard Secrets Manager returns an AbuseIPDB API key and the provider returns reputation data,
+        # when the response agent enriches and archives the finding,
+        # then it should use the key in the provider request but archive only the enrichment result while preserving HIGH finding severity.
+
         with (
             patch.object(runtime.boto3, "client") as client,
             patch.object(runtime.BudgetedHttpClient, "get_json", return_value={"data": {"abuseConfidenceScore": 80}}) as http,
@@ -53,7 +59,10 @@ class EnrichmentRuntimeTests(unittest.TestCase):
         self.assertEqual(saved["context"]["severity"], "HIGH")
 
     def test_secret_failure_does_not_stop_other_providers(self):
-        """Given denied credentials, when enriched, then CISA still runs."""
+        # Given Asgard secret retrieval fails and the finding contains a CVE identifier,
+        # when enrich_for_archive runs the available providers,
+        # then it should record the AbuseIPDB error, still query CISA, and omit the secret error text from the results.
+
         self.finding["evidence"]["cve_ids"] = ["CVE-2021-44228"]
         with (
             patch.object(runtime.boto3, "client") as client,
@@ -67,7 +76,10 @@ class EnrichmentRuntimeTests(unittest.TestCase):
         http.assert_called_once()
 
     def test_request_checks_remaining_time(self):
-        """Given a dwindling budget, when another lookup starts, then HTTP is skipped."""
+        # Given the Asgard Lambda context reports only one second of execution time remaining,
+        # when the budget-aware HTTP client attempts another provider lookup,
+        # then it should raise ProviderResponseError without making an HTTP request.
+
         context = Mock()
         context.get_remaining_time_in_millis.return_value = 1000
         with patch.object(runtime.JsonHttpClient, "get_json") as http:
@@ -76,7 +88,10 @@ class EnrichmentRuntimeTests(unittest.TestCase):
             http.assert_not_called()
 
     def test_handler_survives_provider_failure(self):
-        """Given a failing provider, when the handler runs, then it still archives and succeeds."""
+        # Given Asgard AbuseIPDB requests fail while finding persistence and archival are available,
+        # when the response agent Lambda handler processes the finding,
+        # then it should return statusCode 200 and an archive key with the provider ERROR recorded in the archived evidence.
+
         with (
             patch.object(runtime.boto3, "client") as client,
             patch.object(runtime.BudgetedHttpClient, "get_json", side_effect=RuntimeError("offline")),

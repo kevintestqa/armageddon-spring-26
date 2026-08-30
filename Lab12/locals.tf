@@ -14,7 +14,7 @@ locals {
   https          = "https"
 
   common_tags = {
-    Project     = var.project_name
+    Project     = "Asgard" # Cost allocation is case-sensitive; resource names stay lowercase.
     Environment = var.environment
     CostCenter  = var.cost_center
   }

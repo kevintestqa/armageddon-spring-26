@@ -12,6 +12,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import BotoCoreError, ClientError
 from enrichment_runtime import enrich_for_archive
+from monitoring import record_finding, record_archive, record_enrichment
 from threat_evidence import (
     archive_threat_evidence,
     normalize_finding_item_to_threat_evidence,
@@ -745,6 +746,8 @@ def save_finding(
     )
 
     findings_table.put_item(Item=item)
+    # Count only after DynamoDB confirms persistence.
+    record_finding(item["severity"])
 
     print(
         f"Saved correlation finding {finding_id} "
@@ -761,6 +764,7 @@ def archive_finding_as_threat_evidence(
     """Normalize and archive a finding without failing correlation."""
 
     if not THREAT_EVIDENCE_BUCKET:
+        record_archive("SKIPPED")
         print(
             "Threat evidence archival skipped because "
             "THREAT_EVIDENCE_BUCKET is not configured."
@@ -777,6 +781,7 @@ def archive_finding_as_threat_evidence(
 
         # Preserve observations; enrichment is an additive archived field.
         threat_evidence["enrichment"] = enrich_for_archive(threat_evidence, finding, context)
+        record_enrichment(threat_evidence["enrichment"])
 
         object_key = archive_threat_evidence(
             s3_client=s3_client,
@@ -789,11 +794,13 @@ def archive_finding_as_threat_evidence(
             f"s3://{THREAT_EVIDENCE_BUCKET}/{object_key}."
         )
 
+        record_archive("SUCCESS")
         return object_key
     except Exception as error:
         # Archival is additive observability. A transient S3 or normalization
         # failure must not erase the correlation finding already saved in
         # DynamoDB or prevent the incident workflow from continuing.
+        record_archive("ERROR")
         print(
             "Threat evidence archival failed: "
             f"{type(error).__name__}: {error}"
