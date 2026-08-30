@@ -32,7 +32,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 
 resource "aws_iam_policy" "asgard_lambda_app_policy" {
   name        = "asgard_lambda_app_policy"
-  description = "Allows Asgard Lambda functions to process security data, invoke Bedrock, publish alerts, emit events, and generate security and compliance reports."
+  description = "Allows the remaining shared-role Lambdas to process security data, invoke Bedrock, publish alerts, and generate security and compliance reports."
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -94,16 +94,6 @@ resource "aws_iam_policy" "asgard_lambda_app_policy" {
         ]
 
         Resource = "*"
-      },
-      {
-        Sid    = "PublishSecurityEvents"
-        Effect = "Allow"
-
-        Action = [
-          "events:PutEvents"
-        ]
-
-        Resource = data.aws_cloudwatch_event_bus.default.arn
       },
       {
         Sid    = "UploadExecutiveReports"

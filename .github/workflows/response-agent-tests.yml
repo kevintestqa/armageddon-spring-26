@@ -1,0 +1,64 @@
+name: Response Agent Tests
+
+on:
+  # Allow an engineer to run the focused suite without changing source files.
+  workflow_dispatch:
+
+  # Path filters keep Python-only validation separate from Terraform CI.
+  push:
+    paths:
+      - ".github/workflows/response-agent-tests.yml"
+      - "Lab12/Lambda_Src/response_agent_package/**"
+      - "Lab12/tests/python/**"
+      - "Lab12/requirements-test.txt"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/response-agent-tests.yml"
+      - "Lab12/Lambda_Src/response_agent_package/**"
+      - "Lab12/tests/python/**"
+      - "Lab12/requirements-test.txt"
+
+permissions:
+  # Tests only read repository content and use mocked AWS clients.
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Python Unit Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./Lab12
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: Lab12/requirements-test.txt
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-test.txt
+
+      - name: Compile Response Agent package
+        # Catch syntax/import-package problems before executing unit tests.
+        run: |
+          python -m compileall -q Lambda_Src/response_agent_package
+
+      - name: Run Response Agent unit tests
+        # unittest is part of Python, so pytest is not required for this suite.
+        run: |
+          python -m unittest discover \
+            -s tests/python \
+            -p "test_*.py" \
+            -v

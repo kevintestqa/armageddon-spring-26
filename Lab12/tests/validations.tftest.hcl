@@ -226,3 +226,68 @@ run "valid_dynamodb_table_attribute_type" {
     error_message = "DynamoDB table asgard_compliance_evidence must have attribute type set to S"
   }
 }
+
+run "project_cost_allocation_tag_is_active" {
+  command = plan
+
+  assert {
+    condition = (
+      aws_ce_cost_allocation_tag.asgard_cost_allocation_tag.tag_key == "Project"
+    )
+
+    error_message = "The Project tag key must be activated for cost allocation."
+  }
+
+  assert {
+    condition = (
+      aws_ce_cost_allocation_tag.asgard_cost_allocation_tag.status == "Active"
+    )
+
+    error_message = "The Project cost allocation tag must have Active status."
+  }
+}
+
+run "project_tag_value_is_asgard" {
+  command = plan
+
+  assert {
+    condition = (
+      local.common_tags["Project"] == "Asgard"
+    )
+
+    error_message = "The Project tag value must be exactly 'Asgard'."
+  }
+}
+
+run "valid_budget_configuration" {
+  command = plan
+
+  assert {
+    condition = (
+      aws_budgets_budget.asgard_budget.budget_type == "COST"
+      &&
+      aws_budgets_budget.asgard_budget.time_unit == "MONTHLY"
+      &&
+      tonumber(aws_budgets_budget.asgard_budget.limit_amount) == var.budget_limit
+    )
+
+    error_message = "AWS Budget must use the configured monthly cost limit."
+  }
+}
+
+run "valid_cost_anomaly_monitor_configuration" {
+  command = plan
+  variables { existing_service_monitor_arn = null }
+
+  assert {
+    condition = (
+      aws_ce_anomaly_monitor.asgard_service_anomaly_monitor[0].monitor_type ==
+      "DIMENSIONAL"
+      &&
+      aws_ce_anomaly_monitor.asgard_service_anomaly_monitor[0].monitor_dimension ==
+      "SERVICE"
+    )
+
+    error_message = "Cost anomaly monitor must detect anomalies by AWS service."
+  }
+}

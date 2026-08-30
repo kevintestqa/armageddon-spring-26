@@ -12,4 +12,10 @@ locals {
   all_protocol   = "All"
   http           = "http"
   https          = "https"
+
+  common_tags = {
+    Project     = "Asgard" # Cost allocation is case-sensitive; resource names stay lowercase.
+    Environment = var.environment
+    CostCenter  = var.cost_center
+  }
 }

@@ -7,11 +7,11 @@ check "lambda_uses_expected_deployment_package" {
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.filename ==
-      data.archive_file.asgard_lambda_function.output_path
+      aws_lambda_function.asgard_response_agent_function.filename ==
+      data.archive_file.asgard_response_agent_function.output_path
       &&
-      aws_lambda_function.asgard_lambda_function.code_sha256 ==
-      data.archive_file.asgard_lambda_function.output_base64sha256
+      aws_lambda_function.asgard_response_agent_function.code_sha256 ==
+      data.archive_file.asgard_response_agent_function.output_base64sha256
     )
 
     error_message = "The Asgard Lambda function must use the generated response agent archive and its matching source hash."
@@ -21,15 +21,15 @@ check "lambda_uses_expected_deployment_package" {
 check "lambda_uses_expected_execution_role" {
   # Given the Asgard Lambda is configured with an execution role,
   # when the role assignment is checked,
-  # then the function should use the Asgard Lambda role.
+  # then the function should use its dedicated Response Agent role.
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.role ==
-      aws_iam_role.asgard_lambda_role.arn
+      aws_lambda_function.asgard_response_agent_function.role ==
+      aws_iam_role.asgard_response_agent.arn
     )
 
-    error_message = "The Asgard Lambda function must use the Asgard Lambda execution role."
+    error_message = "The Response Agent must use its dedicated execution role."
   }
 }
 
@@ -40,9 +40,9 @@ check "lambda_uses_expected_runtime_and_handler" {
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.runtime == "python3.14"
+      aws_lambda_function.asgard_response_agent_function.runtime == "python3.14"
       &&
-      aws_lambda_function.asgard_lambda_function.handler ==
+      aws_lambda_function.asgard_response_agent_function.handler ==
       "response_agent.lambda_handler"
     )
 
@@ -53,30 +53,30 @@ check "lambda_uses_expected_runtime_and_handler" {
 check "lambda_environment_variables_reference_expected_resources" {
   # Given the Asgard Lambda is configured with environment variables,
   # when the environment variable values are checked,
-  # then they should reference the expected tables, SNS topic, and Bedrock configuration.
+  # then they should reference the expected tables, archive, and Bedrock configuration.
 
   assert {
     condition = (
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["CORRELATION_FINDINGS_TABLE"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["CORRELATION_FINDINGS_TABLE"] ==
       aws_dynamodb_table.asgard_waf_correlation_findings.name
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["SECURITY_INCIDENTS_TABLE"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["SECURITY_INCIDENTS_TABLE"] ==
       aws_dynamodb_table.asgard_security_incidents.name
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["WAF_EVENTS_TABLE"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["WAF_EVENTS_TABLE"] ==
       aws_dynamodb_table.asgard_waf_events.name
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["SNS_TOPIC_ARN"] ==
-      aws_sns_topic.asgard_critical_alerts_topic.arn
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["THREAT_EVIDENCE_BUCKET"] ==
+      aws_s3_bucket.asgard_threat_evidence.bucket
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["BEDROCK_MODEL_ID"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["BEDROCK_MODEL_ID"] ==
       "us.anthropic.claude-sonnet-4-6"
       &&
-      aws_lambda_function.asgard_lambda_function.environment[0].variables["ENABLE_BEDROCK"] ==
+      aws_lambda_function.asgard_response_agent_function.environment[0].variables["ENABLE_BEDROCK"] ==
       "true"
     )
 
-    error_message = "The Asgard Lambda environment variables must reference the expected tables, SNS topic, Bedrock model, and enablement value."
+    error_message = "The Response Agent environment must reference the expected tables, archive, Bedrock model, and enablement value."
   }
 }
 
@@ -171,23 +171,25 @@ check "waf_bedrock_lambda_timeout_is_60_seconds" {
 check "lambda_uses_only_expected_environment_variables" {
   # Given the Asgard Lambda is configured with environment variables,
   # when the environment variable names are checked,
-  # then only the six approved variables should be present.
+  # then only the eight approved variables should be present.
 
   assert {
     condition = toset(
       keys(
-        aws_lambda_function.asgard_lambda_function.environment[0].variables
+        aws_lambda_function.asgard_response_agent_function.environment[0].variables
       )
       ) == toset([
         "CORRELATION_FINDINGS_TABLE",
         "SECURITY_INCIDENTS_TABLE",
         "WAF_EVENTS_TABLE",
-        "SNS_TOPIC_ARN",
+        "THREAT_EVIDENCE_BUCKET",
+        "ENABLE_THREAT_ENRICHMENT",
+        "ABUSEIPDB_SECRET_ARN",
         "BEDROCK_MODEL_ID",
         "ENABLE_BEDROCK"
     ])
 
-    error_message = "The Asgard Lambda function must contain only the required DynamoDB, SNS, and Bedrock environment variables."
+    error_message = "The Response Agent must contain only the required DynamoDB, threat-evidence archive, and Bedrock environment variables."
   }
 }
 

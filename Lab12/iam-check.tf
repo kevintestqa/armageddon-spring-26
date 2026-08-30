@@ -140,29 +140,6 @@ check "lambda_app_policy_allows_filter_log_events" {
   }
 }
 
-check "lambda_policy_allows_eventbridge_put_events" {
-  # Given the Lambda application IAM policy is configured with EventBridge permissions,
-  # when the EventBridge statement is checked,
-  # then events:PutEvents should be allowed only on the default event bus.
-
-  assert {
-    condition = length([
-      for statement in local.asgard_lambda_app_policy.Statement : statement
-      if(
-        try(statement.Sid, "") == "PublishSecurityEvents"
-        && statement.Effect == "Allow"
-        && toset(try(tolist(statement.Action), [statement.Action])) == toset([
-          "events:PutEvents"
-        ])
-        && try(statement.Resource, "") ==
-        data.aws_cloudwatch_event_bus.default.arn
-      )
-    ]) == 1
-
-    error_message = "The Lambda IAM policy must allow events:PutEvents only on the default EventBridge bus."
-  }
-}
-
 check "lambda_policy_limits_report_uploads_to_expected_prefix" {
   # Given the Lambda application IAM policy is configured with executive-report S3 permissions,
   # when the upload statement is checked,

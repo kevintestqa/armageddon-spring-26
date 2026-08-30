@@ -54,7 +54,9 @@ jobs:
           mv *-check.tf /tmp/terraform-checks/
 
       - name: Terraform Test
-        run: terraform test -filter=tests/validations.tftest.hcl
+        # Discover every tests/*.tftest.hcl suite, including the immutable
+        # threat-evidence archive scenarios.
+        run: terraform test
 
       # if: always() is a GitHub Actions conditional. It tells this restore step to run
       # even if the Terraform Test step fails, so the temporarily moved *-check.tf files

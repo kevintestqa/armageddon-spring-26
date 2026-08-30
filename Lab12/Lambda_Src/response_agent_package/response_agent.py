@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import uuid
@@ -9,6 +11,12 @@ from typing import Any
 import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import BotoCoreError, ClientError
+from enrichment_runtime import enrich_for_archive
+from monitoring import record_finding, record_archive, record_enrichment
+from threat_evidence import (
+    archive_threat_evidence,
+    normalize_finding_item_to_threat_evidence,
+)
 
 
 # ============================================================
@@ -18,6 +26,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 bedrock_client = boto3.client("bedrock-runtime")
 dynamodb = boto3.resource("dynamodb")
 eventbridge_client = boto3.client("events")
+s3_client = boto3.client("s3")
 
 
 # ============================================================
@@ -51,6 +60,11 @@ MINIMUM_EVENT_COUNT = int(
 
 MAX_EVENTS = int(
     os.environ.get("MAX_EVENTS", "500")
+)
+
+THREAT_EVIDENCE_BUCKET = os.environ.get(
+    "THREAT_EVIDENCE_BUCKET",
+    "",
 )
 
 ADMIN_URI_KEYWORDS = [
@@ -670,14 +684,13 @@ def determine_overall_risk(
     )
 
 
-def save_finding(
+def build_finding_item(
+    finding_id: str,
+    created_at: str,
     evidence_package: dict[str, Any],
     bedrock_report: str,
-) -> str:
-    """Store the final correlation finding."""
-
-    finding_id = str(uuid.uuid4())
-    created_at = datetime.now(timezone.utc).isoformat()
+) -> dict[str, Any]:
+    """Build the DynamoDB finding without performing an AWS operation."""
 
     risk_score, severity, primary_source_ip = (
         determine_overall_risk(evidence_package)
@@ -694,7 +707,7 @@ def save_finding(
         else None
     )
 
-    item = {
+    return {
         "finding_id": finding_id,
         "created_at": created_at,
         "window_start": evidence_package[
@@ -715,14 +728,84 @@ def save_finding(
         "evidence": evidence_package,
     }
 
+
+def save_finding(
+    evidence_package: dict[str, Any],
+    bedrock_report: str,
+) -> dict[str, Any]:
+    """Store the final correlation finding."""
+
+    finding_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    item = build_finding_item(
+        finding_id=finding_id,
+        created_at=created_at,
+        evidence_package=evidence_package,
+        bedrock_report=bedrock_report,
+    )
+
     findings_table.put_item(Item=item)
+    # Count only after DynamoDB confirms persistence.
+    record_finding(item["severity"])
 
     print(
         f"Saved correlation finding {finding_id} "
-        f"with severity {severity}."
+        f"with severity {item['severity']}."
     )
 
-    return finding_id
+    return item
+
+
+def archive_finding_as_threat_evidence(
+    finding: dict[str, Any],
+    context=None,
+) -> str | None:
+    """Normalize and archive a finding without failing correlation."""
+
+    if not THREAT_EVIDENCE_BUCKET:
+        record_archive("SKIPPED")
+        print(
+            "Threat evidence archival skipped because "
+            "THREAT_EVIDENCE_BUCKET is not configured."
+        )
+        return None
+
+    try:
+        threat_evidence = (
+            normalize_finding_item_to_threat_evidence(
+                finding,
+                aws_region=os.environ.get("AWS_REGION"),
+            )
+        )
+
+        # Preserve observations; enrichment is an additive archived field.
+        threat_evidence["enrichment"] = enrich_for_archive(threat_evidence, finding, context)
+        record_enrichment(threat_evidence["enrichment"])
+
+        object_key = archive_threat_evidence(
+            s3_client=s3_client,
+            bucket_name=THREAT_EVIDENCE_BUCKET,
+            evidence=threat_evidence,
+        )
+
+        print(
+            "Archived normalized threat evidence at "
+            f"s3://{THREAT_EVIDENCE_BUCKET}/{object_key}."
+        )
+
+        record_archive("SUCCESS")
+        return object_key
+    except Exception as error:
+        # Archival is additive observability. A transient S3 or normalization
+        # failure must not erase the correlation finding already saved in
+        # DynamoDB or prevent the incident workflow from continuing.
+        record_archive("ERROR")
+        print(
+            "Threat evidence archival failed: "
+            f"{type(error).__name__}: {error}"
+        )
+        return None
 
 
 def save_security_incident(
@@ -885,10 +968,12 @@ def lambda_handler(
         print(bedrock_report)
         print("=================================\n")
 
-        finding_id = save_finding(
+        finding = save_finding(
             evidence_package=evidence_package,
             bedrock_report=bedrock_report,
         )
+
+        finding_id = finding["finding_id"]
 
         incident_id = save_security_incident(
             finding_id=finding_id,
@@ -907,6 +992,9 @@ def lambda_handler(
             primary_source_ip=primary_source_ip,
         )
 
+        # Complete the incident/event workflow before best-effort external I/O.
+        evidence_archive_key = archive_finding_as_threat_evidence(finding, context)
+
         result = {
             "message": "Threat correlation completed.",
             "finding_created": True,
@@ -916,6 +1004,7 @@ def lambda_handler(
             "severity": severity,
             "risk_score": risk_score,
             "primary_source_ip": primary_source_ip,
+            "evidence_archive_key": evidence_archive_key,
         }
 
         print("Correlation result:")
