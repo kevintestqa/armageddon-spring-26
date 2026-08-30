@@ -30,6 +30,8 @@ resource "aws_lambda_function" "asgard_response_agent_function" {
       SECURITY_INCIDENTS_TABLE   = aws_dynamodb_table.asgard_security_incidents.name
       WAF_EVENTS_TABLE           = aws_dynamodb_table.asgard_waf_events.name
       THREAT_EVIDENCE_BUCKET     = aws_s3_bucket.asgard_threat_evidence.bucket
+      ENABLE_THREAT_ENRICHMENT   = tostring(var.enable_threat_enrichment)
+      ABUSEIPDB_SECRET_ARN       = aws_secretsmanager_secret.asgard_abuseipdb.arn
 
       BEDROCK_MODEL_ID = var.bedrock_model_id
       ENABLE_BEDROCK   = tostring(var.enable_bedrock)

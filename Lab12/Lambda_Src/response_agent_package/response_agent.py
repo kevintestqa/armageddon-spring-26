@@ -11,6 +11,7 @@ from typing import Any
 import boto3
 from boto3.dynamodb.conditions import Attr
 from botocore.exceptions import BotoCoreError, ClientError
+from enrichment_runtime import enrich_for_archive
 from threat_evidence import (
     archive_threat_evidence,
     normalize_finding_item_to_threat_evidence,
@@ -755,6 +756,7 @@ def save_finding(
 
 def archive_finding_as_threat_evidence(
     finding: dict[str, Any],
+    context=None,
 ) -> str | None:
     """Normalize and archive a finding without failing correlation."""
 
@@ -772,6 +774,9 @@ def archive_finding_as_threat_evidence(
                 aws_region=os.environ.get("AWS_REGION"),
             )
         )
+
+        # Preserve observations; enrichment is an additive archived field.
+        threat_evidence["enrichment"] = enrich_for_archive(threat_evidence, finding, context)
 
         object_key = archive_threat_evidence(
             s3_client=s3_client,
@@ -963,10 +968,6 @@ def lambda_handler(
 
         finding_id = finding["finding_id"]
 
-        evidence_archive_key = (
-            archive_finding_as_threat_evidence(finding)
-        )
-
         incident_id = save_security_incident(
             finding_id=finding_id,
             evidence_package=evidence_package,
@@ -983,6 +984,9 @@ def lambda_handler(
             risk_score=risk_score,
             primary_source_ip=primary_source_ip,
         )
+
+        # Complete the incident/event workflow before best-effort external I/O.
+        evidence_archive_key = archive_finding_as_threat_evidence(finding, context)
 
         result = {
             "message": "Threat correlation completed.",
