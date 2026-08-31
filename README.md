@@ -12,7 +12,7 @@ Rather than treating detection, response, reporting, observability, security gov
 
 ## Architecture
 
-![ASGARD Cloud Security Automation Platform Architecture](docs/images/asgard-architecture.png)
+![ASGARD Cloud Security Automation Platform Architecture](Lab12/Docs/Images/asgard-architecture.png)
 
 ASGARD follows four primary stages:
 
