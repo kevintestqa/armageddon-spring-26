@@ -126,7 +126,10 @@ Executive reporting summarizes areas such as:
 
 Generated reports are stored in Amazon S3.
 
-> Executive report example coming soon.
+### Example Executive Security Report
+
+[View the full Executive Security Report (PDF)](Lab12/Docs/Reports/executive-summary-example.pdf)
+
 
 ## Compliance Reporting
 
@@ -134,9 +137,12 @@ A separate compliance workflow evaluates security evidence and generates structu
 
 The separation between evidence and findings allows the platform to preserve what was observed independently from the conclusions generated from that evidence.
 
-Compliance reporting artifacts are also stored in Amazon S3.
+Compliance reporting artifacts are stored in Amazon S3.
 
-> Compliance report example coming soon.
+### Example Compliance Report
+
+[View the full Compliance Report (PDF)](Lab12/Docs/Reports/compliance-summary-example.pdf)
+
 
 ---
 
